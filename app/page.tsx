@@ -386,7 +386,9 @@ export default function Home() {
         // Ignore malformed files and keep valid response files usable.
       }
     }
-    const matching = loaded.filter((response) => response.questionnaire.id === dashboardStudyId);
+    const selectedStudy = questionnaireStore[dashboardStudyId]?.study ?? (dashboardStudyId === initialStudy.id ? initialStudy : study);
+    const normalizeStudyName = (value: string) => value.trim().toLowerCase().replace(/\s+/g, " ");
+    const matching = loaded.filter((response) => response.questionnaire.id === dashboardStudyId || normalizeStudyName(response.questionnaire.name) === normalizeStudyName(selectedStudy.name));
     setDashboardResponses(matching);
     setDashboardError(matching.length ? "" : "No valid responses for this questionnaire were found in the selected files.");
   }
@@ -463,9 +465,10 @@ function calculateConstructMetrics(responses: ParticipantResponseExport[]): Cons
 }
 
 function calculateLearningGain(responses: ParticipantResponseExport[]) {
-  let preCorrect = 0;
-  let postCorrect = 0;
-  let totalQuestions = 0;
+  let preScoreTotal = 0;
+  let postScoreTotal = 0;
+  let scoredParticipants = 0;
+  let questionCount = 0;
   function isCorrect(answer: string | undefined, question: Question) {
     if (!answer || !question.correct) return false;
     if (answer === question.correct) return true;
@@ -475,15 +478,15 @@ function calculateLearningGain(responses: ParticipantResponseExport[]) {
 
   responses.forEach((response) => {
     const testQuestions = response.questionnaire.questions.TEST;
-    testQuestions.forEach((question) => {
-      if (!question.correct) return;
-      totalQuestions += 1;
-      if (isCorrect(response.answers.PRE_TEST[question.id], question)) preCorrect += 1;
-      if (isCorrect(response.answers.POST_TEST[question.id], question)) postCorrect += 1;
-    });
+    const scoredQuestions = testQuestions.filter((question) => question.correct);
+    if (!scoredQuestions.length) return;
+    questionCount = Math.max(questionCount, scoredQuestions.length);
+    preScoreTotal += scoredQuestions.filter((question) => isCorrect(response.answers.PRE_TEST[question.id], question)).length;
+    postScoreTotal += scoredQuestions.filter((question) => isCorrect(response.answers.POST_TEST[question.id], question)).length;
+    scoredParticipants += 1;
   });
-  if (!totalQuestions) return null;
-  return { pre: preCorrect, post: postCorrect, gain: postCorrect - preCorrect, total: totalQuestions };
+  if (!scoredParticipants || !questionCount) return null;
+  return { pre: preScoreTotal / scoredParticipants, post: postScoreTotal / scoredParticipants, gain: (postScoreTotal - preScoreTotal) / scoredParticipants, total: questionCount };
 }
 
 function Dashboard({ study, responses, error, onImport }: { study: Study; responses: ParticipantResponseExport[]; error: string; onImport: () => void }) {
@@ -493,7 +496,7 @@ function Dashboard({ study, responses, error, onImport }: { study: Study; respon
     const metric = metrics.find((item) => item.construct === construct);
     return <div className={`metric-card ${metric?.average == null ? "unmeasured" : ""}`} key={construct}><span className="metric-icon">{construct.slice(0, 2).toUpperCase()}</span><div className="metric-card-copy"><h3>{construct}</h3>{metric?.average == null ? <span className="unmeasured-label">Not measured</span> : <><strong className="metric-value">{metric.average.toFixed(2)}<small>/ 7</small></strong><div className="metric-bar"><span style={{ width: `${(metric.average / 7) * 100}%` }} /></div></>}</div></div>;
   };
-  return <div className="dashboard-wrap"><div className="dashboard-heading"><div><span className="overline">QUESTIONNAIRE DASHBOARD</span><h1>{study.name}</h1><p>GLEE construct averages across imported participant responses.</p></div><button className="create-study-button" onClick={onImport}>+ Load response JSONs</button></div>{error && <div className="settings-alert">{error}</div>}<div className="dashboard-summary"><div><span className="dashboard-summary-label">Responses loaded</span><strong>{responses.length}</strong></div><div><span className="dashboard-summary-label">Scale</span><strong>1-7</strong></div><div><span className="dashboard-summary-label">Constructs measured</span><strong>{metrics.filter((metric) => metric.average !== null).length} / {metrics.length}</strong></div></div><div className="dashboard-board"><div className="dashboard-band game-band">GAME USER EXPERIENCE</div><div className="dashboard-band learning-band">LEARNING PROCESSES &amp; OUTCOMES</div><section className="dashboard-column design-column"><header><span>01</span><strong>DESIGN QUALITIES</strong></header>{dashboardGroups.design.map(renderMetric)}</section><section className="dashboard-column experiential-column"><header><span>02</span><strong>EXPERIENTIAL RESPONSES</strong></header>{dashboardGroups.experiential.map(renderMetric)}</section><section className="dashboard-column subjective-column"><header><span>03</span><strong>SUBJECTIVE PERCEPTIONS</strong></header>{dashboardGroups.subjective.map(renderMetric)}</section><section className="dashboard-column objective-column"><header><span>04</span><strong>OBJECTIVE OUTCOMES</strong></header><div className={`metric-card learning-gain-card ${learningGain ? "" : "unmeasured"}`}><span className="metric-icon">LG</span><div className="metric-card-copy"><h3>Learning Gain</h3>{learningGain ? <><strong className="metric-value">{learningGain.pre.toFixed(2)} <small>-&gt; {learningGain.post.toFixed(2)} / 7</small></strong><div className="metric-bar"><span style={{ width: `${Math.max(0, Math.min(100, (learningGain.post / 7) * 100))}%` }} /></div><span className="metric-meta">Gain {learningGain.gain >= 0 ? "+" : ""}{learningGain.gain.toFixed(2)} points</span></> : <span className="unmeasured-label">Not measured</span>}</div></div></section></div></div>;
+  return <div className="dashboard-wrap"><div className="dashboard-heading"><div><span className="overline">QUESTIONNAIRE DASHBOARD</span><h1>{study.name}</h1><p>GLEE construct averages across imported participant responses.</p></div><button className="create-study-button" onClick={onImport}>+ Load response JSONs</button></div>{error && <div className="settings-alert">{error}</div>}<div className="dashboard-summary"><div><span className="dashboard-summary-label">Responses loaded</span><strong>{responses.length}</strong></div><div><span className="dashboard-summary-label">Scale</span><strong>1-7</strong></div><div><span className="dashboard-summary-label">Constructs measured</span><strong>{metrics.filter((metric) => metric.average !== null).length} / {metrics.length}</strong></div></div><div className="dashboard-board"><div className="dashboard-band game-band">GAME USER EXPERIENCE</div><div className="dashboard-band learning-band">LEARNING PROCESSES &amp; OUTCOMES</div><section className="dashboard-column design-column"><header><span>01</span><strong>DESIGN QUALITIES</strong></header>{dashboardGroups.design.map(renderMetric)}</section><section className="dashboard-column experiential-column"><header><span>02</span><strong>EXPERIENTIAL RESPONSES</strong></header>{dashboardGroups.experiential.map(renderMetric)}</section><section className="dashboard-column subjective-column"><header><span>03</span><strong>SUBJECTIVE PERCEPTIONS</strong></header>{dashboardGroups.subjective.map(renderMetric)}</section><section className="dashboard-column objective-column"><header><span>04</span><strong>OBJECTIVE OUTCOMES</strong></header><div className={`metric-card learning-gain-card ${learningGain ? "" : "unmeasured"}`}><span className="metric-icon">LG</span><div className="metric-card-copy"><h3>Learning Gain</h3>{learningGain ? <><strong className="metric-value">{learningGain.pre.toFixed(2)} <small>-&gt; {learningGain.post.toFixed(2)} / {learningGain.total}</small></strong><div className="metric-bar"><span style={{ width: `${Math.max(0, Math.min(100, (learningGain.post / learningGain.total) * 100))}%` }} /></div><span className="metric-meta">Gain {learningGain.gain >= 0 ? "+" : ""}{learningGain.gain.toFixed(2)} points</span></> : <span className="unmeasured-label">Not measured</span>}</div></div></section></div></div>;
 }
 
 function StudySettings({ study, updateStudy, error }: { study: Study; updateStudy: (field: keyof Study, value: string | boolean) => void; error: string }) {
