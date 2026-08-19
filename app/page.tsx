@@ -74,7 +74,13 @@ type ParticipantResponseExport = {
   formatVersion: 1;
   responseId: string;
   submittedAt: string;
-  questionnaire: { id: string; name: string; gameName: string };
+  questionnaire: {
+    id: string;
+    name: string;
+    gameName: string;
+    description: string;
+    questions: Record<SectionKey, Question[]>;
+  };
   answers: {
     BACKGROUND: Record<string, string>;
     PRE_TEST: Record<string, string>;
@@ -99,11 +105,11 @@ const initialQuestions: Record<SectionKey, Question[]> = {
     { id: "BG_01", text: "How often do you play digital games?", type: "Multiple choice", required: true, objective: "", bloom: "", correct: "", pair: "", construct: "", options: ["Daily", "A few times a week", "A few times a month", "Rarely"] },
   ],
   TEST: [
-    { id: "TEST_Q_01", text: "Which action should you take when you encounter a suspicious email?", type: "Multiple choice", required: true, objective: "Identify phishing attempts", bloom: "Applying", correct: "B", pair: "", construct: "", options: ["Reply to ask who sent it", "Report it and avoid opening links", "Forward it to a friend", "Download the attachment"] },
-    { id: "TEST_Q_02", text: "How confident are you in identifying a phishing attempt?", type: "Likert scale", required: true, objective: "", bloom: "", correct: "", pair: "", construct: "Perceived learning", options: ["1 - Not at all confident", "2", "3", "4", "5 - Very confident"] },
+    { id: "TEST_Q_01", text: "Which action should you take when you encounter a suspicious email?", type: "Multiple choice", required: true, objective: "Identify phishing attempts", bloom: "Applying", correct: "Report it and avoid opening links", pair: "", construct: "", options: ["Reply to ask who sent it", "Report it and avoid opening links", "Forward it to a friend", "Download the attachment"] },
+    { id: "TEST_Q_02", text: "How confident are you in identifying a phishing attempt?", type: "Likert scale", required: true, objective: "", bloom: "", correct: "", pair: "", construct: "Perceived learning", options: ["1 - Completely disagree", "2 - Disagree", "3 - Slightly disagree", "4 - Neutral / neither agree nor disagree", "5 - Slightly agree", "6 - Agree", "7 - Completely agree"] },
   ],
   GAME_UX: [
-    { id: "UX_Q_01", text: "I was fully absorbed in the game.", type: "Likert scale", required: true, objective: "", bloom: "", correct: "", pair: "", construct: "Immersion", options: ["Strongly disagree", "Disagree", "Neither agree nor disagree", "Agree", "Strongly agree"] },
+    { id: "UX_Q_01", text: "I was fully absorbed in the game.", type: "Likert scale", required: true, objective: "", bloom: "", correct: "", pair: "", construct: "Immersion", options: ["1 - Completely disagree", "2 - Disagree", "3 - Slightly disagree", "4 - Neutral / neither agree nor disagree", "5 - Slightly agree", "6 - Agree", "7 - Completely agree"] },
   ],
 };
 
@@ -139,7 +145,7 @@ export default function Home() {
       [activeSection]: current[activeSection].map((question) => {
         if (question.id !== selected.id) return question;
         if (field === "type" && value === "Likert scale" && question.type !== "Likert scale") {
-          return { ...question, type: "Likert scale" as const, options: ["Strongly disagree", "Disagree", "Neither agree nor disagree", "Agree", "Strongly agree"], correct: "" };
+          return { ...question, type: "Likert scale" as const, options: ["1 - Completely disagree", "2 - Disagree", "3 - Slightly disagree", "4 - Neutral / neither agree nor disagree", "5 - Slightly agree", "6 - Agree", "7 - Completely agree"], correct: "" };
         }
         return { ...question, [field]: value };
       }),
@@ -149,7 +155,18 @@ export default function Home() {
   function updateOption(index: number, value: string) {
     setQuestions((current) => ({
       ...current,
-      [activeSection]: current[activeSection].map((question) => question.id === selected.id ? { ...question, options: question.options.map((option, optionIndex) => optionIndex === index ? value : option) } : question),
+      [activeSection]: current[activeSection].map((question) => {
+        if (question.id !== selected.id) return question;
+        const previousOption = question.options[index];
+        return { ...question, options: question.options.map((option, optionIndex) => optionIndex === index ? value : option), correct: question.correct === previousOption ? value : question.correct };
+      }),
+    }));
+  }
+
+  function setCorrectOption(option: string) {
+    setQuestions((current) => ({
+      ...current,
+      [activeSection]: current[activeSection].map((question) => question.id === selected.id ? { ...question, correct: question.correct === option ? "" : option } : question),
     }));
   }
 
@@ -164,7 +181,11 @@ export default function Home() {
     if (selected.options.length <= 2) return;
     setQuestions((current) => ({
       ...current,
-      [activeSection]: current[activeSection].map((question) => question.id === selected.id ? { ...question, options: question.options.filter((_, optionIndex) => optionIndex !== index) } : question),
+      [activeSection]: current[activeSection].map((question) => {
+        if (question.id !== selected.id) return question;
+        const removedOption = question.options[index];
+        return { ...question, options: question.options.filter((_, optionIndex) => optionIndex !== index), correct: question.correct === removedOption ? "" : question.correct };
+      }),
     }));
   }
 
@@ -321,7 +342,7 @@ export default function Home() {
           <div className="builder-layout">
             <div className="section-column"><div className="column-heading"><div><span className="overline">STUDY FLOW</span><h2>Sections</h2></div><button className="icon-button" aria-label="Add section">+</button></div><div className="section-list">{(Object.keys(sectionInfo) as SectionKey[]).map((section) => <button key={section} className={`section-card ${activeSection === section ? "selected" : ""}`} onClick={() => selectSection(section)}><span className="section-number">{sectionInfo[section].eyebrow}</span><span className="section-copy"><strong>{sectionInfo[section].label}</strong><small>{sectionInfo[section].detail}</small></span><span className="section-count">{questions[section].length}</span></button>)}</div><div className="flow-note"><span className="spark">*</span><div><strong>One test, two moments</strong><p>The knowledge test is authored once, then reused after play with randomized question and answer order.</p></div></div></div>
             <div className="question-column"><div className="column-heading"><div><span className="overline">{sectionInfo[activeSection].eyebrow} / {activeSection}</span><h2>{sectionInfo[activeSection].label} questions</h2></div><button className="add-question" onClick={addQuestion}>+ Add question</button></div><div className="question-list">{activeQuestions.map((question) => <button key={question.id} className={`question-row ${selected?.id === question.id ? "selected" : ""}`} onClick={() => setSelectedId(question.id)}><span className="drag">::</span><span className="question-index">{String(activeQuestions.indexOf(question) + 1).padStart(2, "0")}</span><span className="question-summary"><strong>{question.text}</strong><small>{question.id} <i /> {question.type}{question.objective && <><i /> Learning measure</>}</small></span><span className="required-pill">{question.required ? "Required" : "Optional"}</span><span className="row-arrow">{"->"}</span></button>)}</div></div>
-            <div className="inspector"><div className="inspector-head"><div><span className="overline">QUESTION DETAILS</span><h2>{selected?.id ?? "New question"}</h2></div><button className="more-button">...</button></div>{selected && <><label className="field-label">Question text<textarea value={selected.text} onChange={(event) => updateQuestion("text", event.target.value)} /></label><div className="field-grid"><label className="field-label">Question ID<input value={selected.id} onChange={(event) => updateQuestion("id", event.target.value)} /></label><label className="field-label">Question type<select value={selected.type} onChange={(event) => updateQuestion("type", event.target.value)}><option>Multiple choice</option><option>Likert scale</option><option>Short answer</option></select></label></div><label className="toggle-field"><span><strong>Required question</strong><small>Participants must answer this to continue</small></span><button className={`toggle ${selected.required ? "on" : ""}`} onClick={() => updateQuestion("required", !selected.required)} aria-label="Toggle required"><span /></button></label>{selected.type !== "Short answer" && <div className="metadata-block options-block"><div className="metadata-title"><span>Answer options</span><small>{selected.options.length} choices</small></div>{selected.options.map((option, optionIndex) => <div className="option-editor" key={`${selected.id}-option-${optionIndex}`}><span>{String.fromCharCode(65 + optionIndex)}</span><input value={option} onChange={(event) => updateOption(optionIndex, event.target.value)} aria-label={`Option ${optionIndex + 1}`} /><button type="button" onClick={() => removeOption(optionIndex)} aria-label={`Remove option ${optionIndex + 1}`}>x</button></div>)}<button type="button" className="add-option" onClick={addOption}>+ Add answer option</button></div>}<div className="metadata-block"><div className="metadata-title"><span>Learning metadata</span><small>Used for future learning-gain analysis</small></div><label className="field-label">Learning objective<input value={selected.objective} onChange={(event) => updateQuestion("objective", event.target.value)} placeholder="e.g. Identify phishing attempts" /></label><div className="field-grid"><label className="field-label">Bloom level<select value={selected.bloom} onChange={(event) => updateQuestion("bloom", event.target.value)}><option value="">Not specified</option><option>Remembering</option><option>Understanding</option><option>Applying</option><option>Analysing</option><option>Evaluating</option><option>Creating</option></select></label><label className="field-label">Correct answer<input value={selected.correct} onChange={(event) => updateQuestion("correct", event.target.value)} placeholder="e.g. B" /></label></div><label className="field-label">Pre / post pair<input value={selected.pair} onChange={(event) => updateQuestion("pair", event.target.value)} placeholder="e.g. POST_Q_01" /></label></div><div className="metadata-block glee-block"><div className="metadata-title"><span>GLEE construct</span><small>Optional experience measure</small></div><label className="field-label"><select value={selected.construct} onChange={(event) => updateQuestion("construct", event.target.value)}>{constructOptions.map((option) => <option key={option} value={option}>{option || "No construct linked"}</option>)}</select></label></div></>}</div>
+            <div className="inspector"><div className="inspector-head"><div><span className="overline">QUESTION DETAILS</span><h2>{selected?.id ?? "New question"}</h2></div><button className="more-button">...</button></div>{selected && <><label className="field-label">Question text<textarea value={selected.text} onChange={(event) => updateQuestion("text", event.target.value)} /></label><div className="field-grid"><label className="field-label">Question ID<input value={selected.id} onChange={(event) => updateQuestion("id", event.target.value)} /></label><label className="field-label">Question type<select value={selected.type} onChange={(event) => updateQuestion("type", event.target.value)}><option>Multiple choice</option><option>Likert scale</option><option>Short answer</option></select></label></div><label className="toggle-field"><span><strong>Required question</strong><small>Participants must answer this to continue</small></span><button className={`toggle ${selected.required ? "on" : ""}`} onClick={() => updateQuestion("required", !selected.required)} aria-label="Toggle required"><span /></button></label>{selected.type !== "Short answer" && <div className="metadata-block options-block"><div className="metadata-title"><span>Answer options</span><small>{selected.options.length} choices</small></div>{selected.options.map((option, optionIndex) => <div className={`option-editor ${selected.correct === option ? "correct-option" : ""}`} key={`${selected.id}-option-${optionIndex}`}><button type="button" className={`correct-toggle ${selected.correct === option ? "on" : ""}`} onClick={() => setCorrectOption(option)} aria-label={`${selected.correct === option ? "Unset" : "Set"} correct answer for option ${optionIndex + 1}`}>{selected.correct === option ? "OK" : ""}</button><span>{String.fromCharCode(65 + optionIndex)}</span><input value={option} onChange={(event) => updateOption(optionIndex, event.target.value)} aria-label={`Option ${optionIndex + 1}`} /><button type="button" onClick={() => removeOption(optionIndex)} aria-label={`Remove option ${optionIndex + 1}`}>x</button></div>)}<button type="button" className="add-option" onClick={addOption}>+ Add answer option</button></div>}<div className="metadata-block"><div className="metadata-title"><span>Learning metadata</span><small>Used for future learning-gain analysis</small></div><label className="field-label">Learning objective<input value={selected.objective} onChange={(event) => updateQuestion("objective", event.target.value)} placeholder="e.g. Identify phishing attempts" /></label><div className="field-grid"><label className="field-label">Bloom level<select value={selected.bloom} onChange={(event) => updateQuestion("bloom", event.target.value)}><option value="">Not specified</option><option>Remembering</option><option>Understanding</option><option>Applying</option><option>Analysing</option><option>Evaluating</option><option>Creating</option></select></label><label className="field-label">Correct answer<select value={selected.correct} onChange={(event) => updateQuestion("correct", event.target.value)}><option value="">No correct answer</option>{selected.options.map((option) => <option key={`correct-${option}`} value={option}>{option}</option>)}</select></label></div><label className="field-label">Pre / post pair<input value={selected.pair} onChange={(event) => updateQuestion("pair", event.target.value)} placeholder="e.g. POST_Q_01" /></label></div><div className="metadata-block glee-block"><div className="metadata-title"><span>GLEE construct</span><small>Optional experience measure</small></div><label className="field-label"><select value={selected.construct} onChange={(event) => updateQuestion("construct", event.target.value)}>{constructOptions.map((option) => <option key={option} value={option}>{option || "No construct linked"}</option>)}</select></label></div></>}</div>
           </div>
         </>}
       </section>
@@ -342,7 +363,7 @@ function StudySettings({ study, updateStudy, error }: { study: Study; updateStud
   return <div className="settings-wrap"><div className="settings-heading"><div><span className="overline">STUDY SETTINGS</span><h1>Shape the study</h1><p>Give participants the context they need, and keep the evaluation flow consistent.</p></div><span className="settings-badge">GLEE / MVP</span></div>{error && <div className="settings-alert">{error}</div>}<div className="settings-grid"><div className="settings-main"><section className="settings-card"><div className="settings-card-heading"><div><span className="settings-number">01</span><h2>Study overview</h2></div><span>Visible to participants</span></div><label className="field-label">Study name<input value={study.name} onChange={(event) => updateStudy("name", event.target.value)} placeholder="e.g. Phishing Quest" /></label><label className="field-label">Description<textarea value={study.description} onChange={(event) => updateStudy("description", event.target.value)} /></label><div className="field-grid"><label className="field-label">Game name<input value={study.gameName} onChange={(event) => updateStudy("gameName", event.target.value)} /></label><label className="field-label">Estimated duration<input value={study.duration} onChange={(event) => updateStudy("duration", event.target.value)} placeholder="e.g. 20 minutes" /></label></div></section><section className="settings-card"><div className="settings-card-heading"><div><span className="settings-number">02</span><h2>Participant welcome</h2></div><span>Shown before Background</span></div><label className="field-label">Introduction text<textarea value={study.welcomeText} onChange={(event) => updateStudy("welcomeText", event.target.value)} /></label><label className="field-label">Game instructions<textarea value={study.gameInstructions} onChange={(event) => updateStudy("gameInstructions", event.target.value)} /></label></section></div><div className="settings-side"><section className="settings-card"><div className="settings-card-heading"><div><span className="settings-number">03</span><h2>Participant access</h2></div></div><label className="setting-toggle"><span><strong>Anonymous participation</strong><small>Do not require names or email addresses</small></span><button className={`toggle ${study.anonymous ? "on" : ""}`} onClick={() => updateStudy("anonymous", !study.anonymous)} aria-label="Toggle anonymous participation"><span /></button></label><label className="setting-toggle"><span><strong>Require consent</strong><small>Ask for agreement before starting</small></span><button className={`toggle ${study.consentRequired ? "on" : ""}`} onClick={() => updateStudy("consentRequired", !study.consentRequired)} aria-label="Toggle consent requirement"><span /></button></label></section><section className="settings-card"><div className="settings-card-heading"><div><span className="settings-number">04</span><h2>Study flow</h2></div></div><div className="flow-setting"><span className="flow-icon">01</span><div><strong>Background</strong><small>Before the knowledge test</small></div><span className="flow-fixed">ON</span></div><div className="flow-setting"><span className="flow-icon">02</span><div><strong>Knowledge test</strong><small>Before and after game play</small></div><span className="flow-fixed">2x</span></div><div className="flow-setting"><span className="flow-icon">03</span><div><strong>Game UX</strong><small>After the game session</small></div><span className="flow-fixed">ON</span></div><div className="display-mode-setting"><span><strong>Participant display</strong><small>Choose whether answers stay focused or appear by section</small></span><select value={study.displayMode} onChange={(event) => updateStudy("displayMode", event.target.value as Study["displayMode"])}><option value="one-at-a-time">One question at a time</option><option value="section">Entire section</option></select></div><label className="setting-toggle flow-toggle"><span><strong>Randomize post-test</strong><small>Shuffle questions and answer options</small></span><button className={`toggle ${study.postTestRandomized ? "on" : ""}`} onClick={() => updateStudy("postTestRandomized", !study.postTestRandomized)} aria-label="Toggle post-test randomization"><span /></button></label></section></div></div></div>;
 }
 
-function buildParticipantResponse(study: Study, answers: Record<string, string>): ParticipantResponseExport {
+function buildParticipantResponse(study: Study, questions: Record<SectionKey, Question[]>, answers: Record<string, string>): ParticipantResponseExport {
   const responseAnswers: ParticipantResponseExport["answers"] = { BACKGROUND: {}, PRE_TEST: {}, POST_TEST: {}, GAME_UX: {} };
   Object.entries(answers).forEach(([key, value]) => {
     const separator = key.indexOf(":");
@@ -353,7 +374,7 @@ function buildParticipantResponse(study: Study, answers: Record<string, string>)
     if (phase === "post-test") responseAnswers.POST_TEST[questionId] = value;
     if (phase === "game-ux") responseAnswers.GAME_UX[questionId] = value;
   });
-  return { format: "glee-participant-response", formatVersion: 1, responseId: `response-${Date.now()}`, submittedAt: new Date().toISOString(), questionnaire: { id: study.id, name: study.name, gameName: study.gameName }, answers: responseAnswers, presentation: { displayMode: study.displayMode, postTestRandomized: study.postTestRandomized } };
+  return { format: "glee-participant-response", formatVersion: 1, responseId: `response-${Date.now()}`, submittedAt: new Date().toISOString(), questionnaire: { id: study.id, name: study.name, gameName: study.gameName, description: study.description, questions }, answers: responseAnswers, presentation: { displayMode: study.displayMode, postTestRandomized: study.postTestRandomized } };
 }
 
 function SectionParticipantPreview({ questions, study, onBack, onComplete }: { questions: Record<SectionKey, Question[]>; study: Study; onBack: () => void; onComplete?: (response: ParticipantResponseExport) => void }) {
@@ -382,7 +403,7 @@ function SectionParticipantPreview({ questions, study, onBack, onComplete }: { q
   function continuePreview() {
     const missing = questionsInStep.find((question) => question.required && !answers[answerKey(question)]?.trim());
     if (missing) { setError("Please answer all required questions before continuing."); return; }
-    if (currentIndex === items.length - 1) { onComplete?.(buildParticipantResponse(study, answers)); setSubmitted(true); return; }
+    if (currentIndex === items.length - 1) { onComplete?.(buildParticipantResponse(study, questions, answers)); setSubmitted(true); return; }
     setCurrentIndex((current) => current + 1); setError("");
   }
 
@@ -432,7 +453,7 @@ function ParticipantPreview({ questions, study, onBack, onComplete }: { question
       return;
     }
     if (currentIndex === items.length - 1) {
-      onComplete?.(buildParticipantResponse(study, answers));
+      onComplete?.(buildParticipantResponse(study, questions, answers));
       setSubmitted(true);
       return;
     }
