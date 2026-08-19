@@ -18,6 +18,45 @@ type Question = {
   options: string[];
 };
 
+type Study = {
+  id: string;
+  name: string;
+  description: string;
+  gameName: string;
+  gameInstructions: string;
+  duration: string;
+  welcomeText: string;
+  anonymous: boolean;
+  consentRequired: boolean;
+  postTestRandomized: boolean;
+};
+
+const initialStudy: Study = {
+  id: "phishing-quest",
+  name: "Phishing Quest",
+  description: "A serious game evaluation study about recognizing phishing attempts.",
+  gameName: "Phishing Quest",
+  gameInstructions: "Play the game as you normally would. The post-test will begin when your game session is complete.",
+  duration: "15 minutes",
+  welcomeText: "Thank you for taking part. This study explores what you learn and how the game feels to play.",
+  anonymous: true,
+  consentRequired: true,
+  postTestRandomized: true,
+};
+
+type StudySummary = {
+  id: string;
+  name: string;
+  description: string;
+  status: "Draft" | "Published";
+  updated: string;
+  questions: number;
+};
+
+const initialStudySummaries: StudySummary[] = [
+  { id: "phishing-quest", name: "Phishing Quest", description: "Recognizing phishing attempts", status: "Draft", updated: "Just now", questions: 4 },
+];
+
 const sectionInfo: Record<SectionKey, { label: string; eyebrow: string; detail: string }> = {
   BACKGROUND: { label: "Background", eyebrow: "01", detail: "Participant context" },
   TEST: { label: "Knowledge test", eyebrow: "02", detail: "Used before & after play" },
@@ -43,8 +82,11 @@ export default function Home() {
   const [activeSection, setActiveSection] = useState<SectionKey>("TEST");
   const [questions, setQuestions] = useState(initialQuestions);
   const [selectedId, setSelectedId] = useState("TEST_Q_01");
-  const [view, setView] = useState<"builder" | "preview">("builder");
+  const [view, setView] = useState<"library" | "builder" | "preview" | "settings">("library");
   const [published, setPublished] = useState(false);
+  const [study, setStudy] = useState(initialStudy);
+  const [studySummaries, setStudySummaries] = useState(initialStudySummaries);
+  const [publishError, setPublishError] = useState("");
 
   const activeQuestions = questions[activeSection];
   const selected = activeQuestions.find((question) => question.id === selectedId) ?? activeQuestions[0];
@@ -92,21 +134,77 @@ export default function Home() {
     setSelectedId(questions[section][0]?.id ?? "");
   }
 
+  function updateStudy(field: keyof Study, value: string | boolean) {
+    setStudy((current) => ({ ...current, [field]: value }));
+    if (field === "name") {
+      setStudySummaries((current) => current.map((item) => item.id === study.id ? { ...item, name: String(value), updated: "Just now" } : item));
+    }
+    setPublishError("");
+  }
+
+  function createQuestionnaire() {
+    const newStudy: Study = { ...initialStudy, id: `questionnaire-${Date.now()}`, name: "Untitled questionnaire", description: "", gameName: "", gameInstructions: "", duration: "", welcomeText: "" };
+    setStudy(newStudy);
+    setQuestions({ BACKGROUND: [], TEST: [], GAME_UX: [] });
+    setActiveSection("TEST");
+    setSelectedId("");
+    setPublished(false);
+    setStudySummaries((current) => [{ id: newStudy.id, name: newStudy.name, description: "New educational game evaluation", status: "Draft", updated: "Just now", questions: 0 }, ...current]);
+    setView("settings");
+  }
+
+  function openQuestionnaire(id: string) {
+    const summary = studySummaries.find((item) => item.id === id);
+    if (!summary) return;
+    if (id === initialStudy.id) {
+      setStudy(initialStudy);
+      setQuestions(initialQuestions);
+    } else {
+      setStudy({ ...initialStudy, id: summary.id, name: summary.name, description: summary.description, gameName: summary.name });
+      setQuestions({ BACKGROUND: [], TEST: [], GAME_UX: [] });
+    }
+    setActiveSection("TEST");
+    setSelectedId(id === initialStudy.id ? "TEST_Q_01" : "");
+    setPublished(summary.status === "Published");
+    setView("builder");
+  }
+
+  function publishStudy() {
+    if (!study.name.trim()) {
+      setPublishError("Add a study name before publishing.");
+      setView("settings");
+      return;
+    }
+    if (questions.TEST.length === 0) {
+      setPublishError("Add at least one knowledge-test question before publishing.");
+      setView("builder");
+      setActiveSection("TEST");
+      return;
+    }
+    if (study.postTestRandomized === false) {
+      setPublishError("Post-test randomization must be enabled for this study flow.");
+      setView("settings");
+      return;
+    }
+    setPublished(true);
+    setPublishError("");
+  }
+
   return (
     <main className="app-shell">
       <aside className="sidebar">
         <div className="brand"><span className="brand-mark">G</span><span>GLEE <small>studio</small></span></div>
         <div className="workspace-label">Workspace</div>
-        <div className="study-mini"><div className="study-dot">P</div><div><strong>Phishing Quest</strong><span>Draft study</span></div><span className="chevron">v</span></div>
-        <nav className="main-nav"><button className="nav-item active"><span className="nav-icon">[]</span>Questionnaire</button><button className="nav-item muted"><span className="nav-icon">#</span>Responses <b>0</b></button><button className="nav-item muted"><span className="nav-icon">i</span>Study settings</button></nav>
+        <button className="study-mini" onClick={() => setView("library")}><div className="study-dot">{study.name.slice(0, 1).toUpperCase() || "S"}</div><div><strong>{study.name || "Untitled questionnaire"}</strong><span>{published ? "Published" : "Draft questionnaire"}</span></div><span className="chevron">v</span></button>
+        <nav className="main-nav"><button className={`nav-item ${view === "library" ? "active" : "muted"}`} onClick={() => setView("library")}><span className="nav-icon">::</span>Questionnaires <b>{studySummaries.length}</b></button><button className={`nav-item ${view === "builder" ? "active" : "muted"}`} onClick={() => setView("builder")}><span className="nav-icon">[]</span>Editor</button><button className={`nav-item ${view === "settings" ? "active" : "muted"}`} onClick={() => setView("settings")}><span className="nav-icon">i</span>Questionnaire settings</button></nav>
         <div className="sidebar-bottom"><div className="completion"><div className="completion-row"><span>Study completion</span><strong>{Math.round((totalQuestions / 8) * 100)}%</strong></div><div className="progress"><span style={{ width: `${Math.min((totalQuestions / 8) * 100, 100)}%` }} /></div><small>{totalQuestions} of 8 recommended questions</small></div><div className="user-chip"><span className="avatar">AR</span><span><strong>Alex Rivera</strong><small>Researcher</small></span><span className="more">...</span></div></div>
       </aside>
 
       <section className="workspace">
-        <header className="topbar"><div><span className="breadcrumb">Studies / Phishing Quest /</span> <strong>{view === "builder" ? "Questionnaire" : "Participant preview"}</strong></div><div className="top-actions"><span className={`save-state ${published ? "published" : ""}`}><span className="status-dot" />{published ? "Published" : "All changes saved"}</span><button className="preview-button" onClick={() => setView(view === "builder" ? "preview" : "builder")}>{view === "builder" ? "Preview study" : "Back to builder"}<span>{"->"}</span></button><button className="publish-button" onClick={() => setPublished(true)}>{published ? "Published" : "Publish study"}<span>^</span></button></div></header>
+        <header className="topbar"><div><span className="breadcrumb">{view === "library" ? "Workspace /" : `Questionnaires / ${study.name || "Untitled questionnaire"} /`}</span> <strong>{view === "library" ? "All questionnaires" : view === "builder" ? "Editor" : view === "settings" ? "Questionnaire settings" : "Participant preview"}</strong></div><div className="top-actions"><span className={`save-state ${published ? "published" : ""}`}><span className="status-dot" />{published ? "Published" : "All changes saved"}</span>{view !== "settings" && view !== "library" && <button className="preview-button" onClick={() => setView(view === "builder" ? "preview" : "builder")}>{view === "builder" ? "Preview questionnaire" : "Back to editor"}<span>{"->"}</span></button>}{view === "settings" && <button className="preview-button" onClick={() => setView("builder")}>Back to editor<span>{"->"}</span></button>}{view !== "library" && <button className="publish-button" onClick={publishStudy}>{published ? "Published" : "Publish questionnaire"}<span>^</span></button>}</div></header>
 
-        {view === "preview" ? <ParticipantPreview questions={questions} onBack={() => setView("builder")} /> : <>
-          <div className="page-heading"><div><div className="overline">QUESTIONNAIRE BUILDER</div><h1>Build your study</h1><p>Structure the moments that turn gameplay into evidence.</p></div><div className="heading-meta"><span className="meta-icon">P</span><div><strong>Phishing Quest</strong><span>Serious game evaluation</span></div><button className="edit-title">Edit</button></div></div>
+        {view === "library" ? <QuestionnaireLibrary questionnaires={studySummaries} onOpen={openQuestionnaire} onCreate={createQuestionnaire} /> : view === "preview" ? <ParticipantPreview questions={questions} onBack={() => setView("builder")} /> : view === "settings" ? <StudySettings study={study} updateStudy={updateStudy} error={publishError} /> : <>
+          <div className="page-heading"><div><div className="overline">QUESTIONNAIRE BUILDER</div><h1>Build your study</h1><p>Structure the moments that turn gameplay into evidence.</p></div><div className="heading-meta"><span className="meta-icon">{study.name.slice(0, 1).toUpperCase() || "S"}</span><div><strong>{study.name || "Untitled study"}</strong><span>{study.gameName || "Serious game evaluation"}</span></div><button className="edit-title" onClick={() => setView("settings")}>Edit</button></div></div>
           <div className="builder-layout">
             <div className="section-column"><div className="column-heading"><div><span className="overline">STUDY FLOW</span><h2>Sections</h2></div><button className="icon-button" aria-label="Add section">+</button></div><div className="section-list">{(Object.keys(sectionInfo) as SectionKey[]).map((section) => <button key={section} className={`section-card ${activeSection === section ? "selected" : ""}`} onClick={() => selectSection(section)}><span className="section-number">{sectionInfo[section].eyebrow}</span><span className="section-copy"><strong>{sectionInfo[section].label}</strong><small>{sectionInfo[section].detail}</small></span><span className="section-count">{questions[section].length}</span></button>)}</div><div className="flow-note"><span className="spark">*</span><div><strong>One test, two moments</strong><p>The knowledge test is authored once, then reused after play with randomized question and answer order.</p></div></div></div>
             <div className="question-column"><div className="column-heading"><div><span className="overline">{sectionInfo[activeSection].eyebrow} / {activeSection}</span><h2>{sectionInfo[activeSection].label} questions</h2></div><button className="add-question" onClick={addQuestion}>+ Add question</button></div><div className="question-list">{activeQuestions.map((question) => <button key={question.id} className={`question-row ${selected?.id === question.id ? "selected" : ""}`} onClick={() => setSelectedId(question.id)}><span className="drag">::</span><span className="question-index">{String(activeQuestions.indexOf(question) + 1).padStart(2, "0")}</span><span className="question-summary"><strong>{question.text}</strong><small>{question.id} <i /> {question.type}{question.objective && <><i /> Learning measure</>}</small></span><span className="required-pill">{question.required ? "Required" : "Optional"}</span><span className="row-arrow">{"->"}</span></button>)}</div></div>
@@ -116,6 +214,14 @@ export default function Home() {
       </section>
     </main>
   );
+}
+
+function QuestionnaireLibrary({ questionnaires, onOpen, onCreate }: { questionnaires: StudySummary[]; onOpen: (id: string) => void; onCreate: () => void }) {
+  return <div className="library-wrap"><div className="library-heading"><div><span className="overline">GLEE WORKSPACE</span><h1>Your questionnaires</h1><p>One evaluation questionnaire for each educational game.</p></div><button className="create-study-button" onClick={onCreate}>+ New questionnaire</button></div><div className="library-toolbar"><span>{questionnaires.length} questionnaires</span><span className="library-hint">Select a questionnaire to edit its Background, Knowledge test, and Game UX flow.</span></div><div className="study-grid">{questionnaires.map((questionnaire) => <button className="study-card" key={questionnaire.id} onClick={() => onOpen(questionnaire.id)}><div className="study-card-top"><span className="study-card-mark">{questionnaire.name.slice(0, 1).toUpperCase() || "Q"}</span><span className={`study-status ${questionnaire.status.toLowerCase()}`}>{questionnaire.status}</span></div><div className="study-card-copy"><h2>{questionnaire.name}</h2><p>{questionnaire.description || "No game description yet"}</p></div><div className="study-card-meta"><span>{questionnaire.questions} questions</span><span>Updated {questionnaire.updated}</span><span className="card-arrow">{"->"}</span></div></button>)}<button className="new-study-card" onClick={onCreate}><span>+</span><strong>Evaluate another game</strong><small>Create a separate questionnaire</small></button></div></div>;
+}
+
+function StudySettings({ study, updateStudy, error }: { study: Study; updateStudy: (field: keyof Study, value: string | boolean) => void; error: string }) {
+  return <div className="settings-wrap"><div className="settings-heading"><div><span className="overline">STUDY SETTINGS</span><h1>Shape the study</h1><p>Give participants the context they need, and keep the evaluation flow consistent.</p></div><span className="settings-badge">GLEE / MVP</span></div>{error && <div className="settings-alert">{error}</div>}<div className="settings-grid"><div className="settings-main"><section className="settings-card"><div className="settings-card-heading"><div><span className="settings-number">01</span><h2>Study overview</h2></div><span>Visible to participants</span></div><label className="field-label">Study name<input value={study.name} onChange={(event) => updateStudy("name", event.target.value)} placeholder="e.g. Phishing Quest" /></label><label className="field-label">Description<textarea value={study.description} onChange={(event) => updateStudy("description", event.target.value)} /></label><div className="field-grid"><label className="field-label">Game name<input value={study.gameName} onChange={(event) => updateStudy("gameName", event.target.value)} /></label><label className="field-label">Estimated duration<input value={study.duration} onChange={(event) => updateStudy("duration", event.target.value)} placeholder="e.g. 20 minutes" /></label></div></section><section className="settings-card"><div className="settings-card-heading"><div><span className="settings-number">02</span><h2>Participant welcome</h2></div><span>Shown before Background</span></div><label className="field-label">Introduction text<textarea value={study.welcomeText} onChange={(event) => updateStudy("welcomeText", event.target.value)} /></label><label className="field-label">Game instructions<textarea value={study.gameInstructions} onChange={(event) => updateStudy("gameInstructions", event.target.value)} /></label></section></div><div className="settings-side"><section className="settings-card"><div className="settings-card-heading"><div><span className="settings-number">03</span><h2>Participant access</h2></div></div><label className="setting-toggle"><span><strong>Anonymous participation</strong><small>Do not require names or email addresses</small></span><button className={`toggle ${study.anonymous ? "on" : ""}`} onClick={() => updateStudy("anonymous", !study.anonymous)} aria-label="Toggle anonymous participation"><span /></button></label><label className="setting-toggle"><span><strong>Require consent</strong><small>Ask for agreement before starting</small></span><button className={`toggle ${study.consentRequired ? "on" : ""}`} onClick={() => updateStudy("consentRequired", !study.consentRequired)} aria-label="Toggle consent requirement"><span /></button></label></section><section className="settings-card"><div className="settings-card-heading"><div><span className="settings-number">04</span><h2>Study flow</h2></div></div><div className="flow-setting"><span className="flow-icon">01</span><div><strong>Background</strong><small>Before the knowledge test</small></div><span className="flow-fixed">ON</span></div><div className="flow-setting"><span className="flow-icon">02</span><div><strong>Knowledge test</strong><small>Before and after game play</small></div><span className="flow-fixed">2x</span></div><div className="flow-setting"><span className="flow-icon">03</span><div><strong>Game UX</strong><small>After the game session</small></div><span className="flow-fixed">ON</span></div><label className="setting-toggle flow-toggle"><span><strong>Randomize post-test</strong><small>Shuffle questions and answer options</small></span><button className={`toggle ${study.postTestRandomized ? "on" : ""}`} onClick={() => updateStudy("postTestRandomized", !study.postTestRandomized)} aria-label="Toggle post-test randomization"><span /></button></label></section></div></div></div>;
 }
 
 type PreviewItem =
