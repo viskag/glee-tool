@@ -34,6 +34,31 @@ button { cursor:pointer; }
 .completion-content { text-align:center; }
 .success-mark { display:grid; place-items:center; width:42px; height:42px; margin:0 auto 22px; border-radius:50%; background:var(--mint); color:var(--green); font:500 10px 'DM Mono'; }
 .completion-content .continue-button { margin-top:24px; }
+.dashboard-wrap { max-width:1180px; padding:56px 52px 80px; }
+.dashboard-heading { display:flex; align-items:flex-end; justify-content:space-between; margin-bottom:30px; }
+.dashboard-heading h1 { margin:8px 0 7px; font-size:34px; letter-spacing:-.04em; }
+.dashboard-heading p { margin:0; color:var(--muted); font-size:13px; }
+.dashboard-summary { display:grid; grid-template-columns:repeat(3, 1fr); gap:10px; margin-bottom:26px; }
+.dashboard-summary > div { padding:16px 18px; border:1px solid var(--line); border-radius:7px; background:#f5f9f5; }
+.dashboard-summary-label { display:block; color:#84918b; font:500 9px 'DM Mono'; text-transform:uppercase; letter-spacing:.08em; }
+.dashboard-summary strong { display:block; margin-top:8px; color:var(--deep); font-size:22px; letter-spacing:-.04em; }
+.metric-grid { display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:12px; }
+.metric-card { min-height:160px; padding:18px; border:1px solid var(--line); border-radius:8px; background:#fff; }
+.metric-label { color:#84918b; font:500 8px 'DM Mono'; letter-spacing:.1em; }
+.metric-card h2 { margin:9px 0 15px; font-size:14px; letter-spacing:-.03em; }
+.metric-value { display:block; color:var(--green); font:800 28px 'Manrope'; letter-spacing:-.05em; }.metric-value small { margin-left:3px; color:#9aa59f; font-size:11px; font-weight:600; }
+.metric-bar { height:5px; margin:13px 0 9px; overflow:hidden; border-radius:99px; background:#e3ebe5; }.metric-bar span { display:block; height:100%; border-radius:inherit; background:var(--orange); }
+.metric-meta { color:#8b9790; font:500 9px 'DM Mono'; }
+.dashboard-empty { padding:62px 25px; border:1px dashed #cbd9d1; border-radius:8px; background:#f8fbf8; text-align:center; }.empty-icon { display:grid; place-items:center; width:38px; height:38px; margin:0 auto 17px; border-radius:50%; background:var(--mint); color:var(--green); font:500 16px 'DM Mono'; }.dashboard-empty h2 { margin:0 0 8px; font-size:15px; }.dashboard-empty p { max-width:460px; margin:0 auto 20px; color:var(--muted); font-size:11px; line-height:1.6; }
+.study-card { position:relative; padding-bottom:50px; }.study-card-open { width:100%; padding:0; border:0; background:transparent; text-align:left; }.study-card-dashboard { position:absolute; right:19px; bottom:16px; border:0; background:transparent; color:var(--green); font-size:9px; font-weight:700; }
+@media (max-width:900px) { .metric-grid { grid-template-columns:repeat(2, minmax(0, 1fr)); }.dashboard-wrap { padding:42px 30px 60px; } }
+@media (max-width:720px) { .dashboard-wrap { padding:38px 22px 50px; }.dashboard-heading { display:block; }.dashboard-heading .create-study-button { margin-top:20px; }.dashboard-summary { grid-template-columns:1fr; }.metric-grid { grid-template-columns:1fr; } }
+.dashboard-board { display:grid; grid-template-columns:1fr 2fr 1fr 1fr; grid-template-rows:auto 1fr; gap:10px; align-items:stretch; }
+.dashboard-band { padding:12px 14px; border-radius:6px; color:#fff; background:#121212; font:800 12px 'Manrope'; letter-spacing:.02em; }.game-band { grid-column:1 / 3; }.learning-band { grid-column:3 / 5; }
+.dashboard-column { display:grid; align-content:start; gap:12px; min-width:0; padding:10px; border:1px solid #cfd7d2; border-radius:8px; background:#fcfdfc; }.dashboard-column > header { display:flex; align-items:center; gap:10px; padding:3px 2px 11px; border-bottom:3px solid #161616; font-size:10px; }.dashboard-column > header span { font:500 9px 'DM Mono'; }.dashboard-column > header strong { font-size:10px; }
+.dashboard-column .metric-card { display:flex; align-items:center; gap:10px; min-height:76px; padding:10px; border:1px solid #202020; border-radius:8px; background:#eaf3f7; box-shadow:1px 2px 0 #151515; }.dashboard-column .metric-card.unmeasured { background:#f3f3f0; color:#747874; }.metric-icon { display:grid; place-items:center; width:35px; height:35px; flex:none; border:1px solid #252525; border-radius:6px; background:#fff; color:#202522; font:800 9px 'DM Mono'; }.metric-card-copy { min-width:0; flex:1; }.dashboard-column .metric-card h3 { margin:0 0 6px; font-size:10px; line-height:1.15; }.dashboard-column .metric-value { font-size:13px; letter-spacing:-.02em; }.dashboard-column .metric-value small { font-size:9px; }.dashboard-column .metric-bar { height:5px; margin:6px 0 0; }.unmeasured-label { color:#777d78; font:500 9px 'DM Mono'; }.learning-gain-card { margin-top:90px; }.learning-gain-card .metric-value { white-space:nowrap; }.learning-gain-card .metric-value small { margin-left:2px; }
+@media (max-width:900px) { .dashboard-board { grid-template-columns:1fr 1fr; }.game-band { grid-column:1 / 3; }.learning-band { grid-column:1 / 3; grid-row:3; }.design-column { grid-column:1; grid-row:2 / 5; }.experiential-column { grid-column:2; grid-row:2 / 5; }.subjective-column { grid-column:1; grid-row:4; }.objective-column { grid-column:2; grid-row:4; }.learning-gain-card { margin-top:0; } }
+@media (max-width:620px) { .dashboard-board { display:block; }.dashboard-band { margin-top:12px; }.dashboard-column { margin-top:10px; }.learning-gain-card { margin-top:0; } }
 .player-library-wrap { max-width:900px; padding:72px 52px 90px; margin:0 auto; }
 .player-library-heading { max-width:580px; margin-bottom:42px; }.player-library-heading h1 { margin:9px 0 8px; font-size:36px; letter-spacing:-.045em; }.player-library-heading p { margin:0; color:var(--muted); font-size:13px; line-height:1.6; }
 .player-questionnaire-grid { display:grid; gap:12px; }.player-questionnaire-card { display:flex; align-items:center; gap:17px; width:100%; padding:20px; border:1px solid var(--line); border-radius:8px; background:#fff; color:var(--ink); text-align:left; transition:border-color .15s, transform .15s; }.player-questionnaire-card:hover { border-color:#80b395; transform:translateY(-2px); }.player-card-mark { display:grid; place-items:center; width:46px; height:46px; flex:none; border-radius:11px; background:#f8dd9f; color:#785623; font-size:18px; font-weight:800; }.player-questionnaire-card div { flex:1; }.player-questionnaire-card h2 { margin:0 0 6px; font-size:15px; letter-spacing:-.03em; }.player-questionnaire-card p { margin:0 0 9px; color:var(--muted); font-size:11px; }.player-questionnaire-card small { color:#8b9790; font:500 9px 'DM Mono'; }.player-card-arrow { color:var(--green); font-size:17px; }
@@ -42,6 +67,11 @@ button { cursor:pointer; }
 .display-mode-setting select { width:100%; padding:9px 10px; border:1px solid var(--line); border-radius:5px; color:var(--green); background:#fff; font-size:10px; }
 .section-preview-list { display:grid; gap:22px; }
 .section-preview-list .preview-question { padding-top:20px; }
+body[data-active-section="TEST"] .glee-block { display:none; }
+body[data-active-section="BACKGROUND"] .correct-toggle,
+body[data-active-section="GAME_UX"] .correct-toggle { display:none; }
+body[data-active-section="BACKGROUND"] .metadata-block:not(.glee-block) .field-grid .field-label:nth-child(2),
+body[data-active-section="GAME_UX"] .metadata-block:not(.glee-block) .field-grid .field-label:nth-child(2) { display:none; }
 .library-wrap { max-width:1120px; padding:58px 52px 80px; }
 .library-heading { display:flex; align-items:flex-end; justify-content:space-between; margin-bottom:38px; }
 .library-heading h1 { margin:8px 0 7px; font-size:34px; letter-spacing:-.04em; }
