@@ -489,6 +489,58 @@ function calculateLearningGain(responses: ParticipantResponseExport[]) {
   return { pre: preScoreTotal / scoredParticipants, post: postScoreTotal / scoredParticipants, gain: (postScoreTotal - preScoreTotal) / scoredParticipants, total: questionCount };
 }
 
+type BackgroundGainGroup = {
+  question: string;
+  answer: string;
+  participants: number;
+  pre: number;
+  post: number;
+  gain: number;
+  preSd: number;
+  postSd: number;
+};
+
+function calculateBackgroundLearningGain(responses: ParticipantResponseExport[]): BackgroundGainGroup[] {
+  const groups = new Map<string, { question: string; answer: string; pre: number[]; post: number[] }>();
+  responses.forEach((response) => {
+    const testQuestions = response.questionnaire.questions.TEST.filter((question) => question.correct);
+    const scored = (phase: "PRE_TEST" | "POST_TEST") => testQuestions.filter((question) => {
+      const answer = response.answers[phase][question.id];
+      if (answer === question.correct) return true;
+      const index = /^[A-G]$/i.test(question.correct) ? question.correct.toUpperCase().charCodeAt(0) - 65 : -1;
+      return index >= 0 && question.options[index] === answer;
+    }).length;
+    if (!testQuestions.length) return;
+    const pre = scored("PRE_TEST");
+    const post = scored("POST_TEST");
+    response.questionnaire.questions.BACKGROUND.forEach((question) => {
+      const answer = response.answers.BACKGROUND[question.id];
+      if (!answer) return;
+      const key = `${question.id}:${answer}`;
+      const group = groups.get(key) ?? { question: question.text, answer, pre: [], post: [] };
+      group.pre.push(pre);
+      group.post.push(post);
+      groups.set(key, group);
+    });
+  });
+  const standardDeviation = (values: number[]) => {
+    if (values.length < 2) return 0;
+    const mean = values.reduce((sum, value) => sum + value, 0) / values.length;
+    return Math.sqrt(values.reduce((sum, value) => sum + (value - mean) ** 2, 0) / (values.length - 1));
+  };
+  return Array.from(groups.values()).map((group) => {
+    const pre = group.pre.reduce((sum, value) => sum + value, 0) / group.pre.length;
+    const post = group.post.reduce((sum, value) => sum + value, 0) / group.post.length;
+    return { question: group.question, answer: group.answer, participants: group.pre.length, pre, post, gain: post - pre, preSd: standardDeviation(group.pre), postSd: standardDeviation(group.post) };
+  });
+}
+
+function BackgroundLearningGainPanel({ responses, study }: { responses: ParticipantResponseExport[]; study: Study }) {
+  const groups = calculateBackgroundLearningGain(responses);
+  const denominator = Math.max(1, responses[0]?.questionnaire.questions.TEST.filter((question) => question.correct).length ?? 1);
+  return <section className="background-gain-panel"><div className="background-gain-heading"><div><span className="overline">OBJECTIVE OUTCOMES / LEARNING GAIN</span><h2>Learning gain by participant group</h2><p>Groups are created from Background answers. Scores use the number of scored Knowledge Test questions.</p></div><span className="gain-legend"><i className="pre-dot" /> Pre-test <i className="post-dot" /> Post-test</span></div>{groups.length ? <div className="gain-group-grid">{groups.map((group) => <article className="gain-group-card" key={`${group.question}-${group.answer}`}><div className="gain-group-title"><span>{group.answer}</span><small>{group.participants} participant{group.participants === 1 ? "" : "s"}</small></div><div className="gain-bars"><div className="gain-bar-row"><span>PRE</span><div><i style={{ width: `${Math.min(100, (group.pre / denominator) * 100)}%` }} /></div><strong>{group.pre.toFixed(2)}</strong></div><div className="gain-bar-row"><span>POST</span><div><i className="post-bar" style={{ width: `${Math.min(100, (group.post / denominator) * 100)}%` }} /></div><strong>{group.post.toFixed(2)}</strong></div></div><div className="gain-group-footer"><strong>{group.gain >= 0 ? "+" : ""}{group.gain.toFixed(2)} points</strong><span>SD {group.preSd.toFixed(2)} / {group.postSd.toFixed(2)}</span></div></article>)}</div> : <div className="background-gain-empty">Load participant response JSONs to compare learning gain across Background groups.</div>}</section>;
+}
+
 function Dashboard({ study, responses, error, onImport }: { study: Study; responses: ParticipantResponseExport[]; error: string; onImport: () => void }) {
   const metrics = calculateConstructMetrics(responses);
   const learningGain = calculateLearningGain(responses);
@@ -496,7 +548,7 @@ function Dashboard({ study, responses, error, onImport }: { study: Study; respon
     const metric = metrics.find((item) => item.construct === construct);
     return <div className={`metric-card ${metric?.average == null ? "unmeasured" : ""}`} key={construct}><span className="metric-icon">{construct.slice(0, 2).toUpperCase()}</span><div className="metric-card-copy"><h3>{construct}</h3>{metric?.average == null ? <span className="unmeasured-label">Not measured</span> : <><strong className="metric-value">{metric.average.toFixed(2)}<small>/ 7</small></strong><div className="metric-bar"><span style={{ width: `${(metric.average / 7) * 100}%` }} /></div></>}</div></div>;
   };
-  return <div className="dashboard-wrap"><div className="dashboard-heading"><div><span className="overline">QUESTIONNAIRE DASHBOARD</span><h1>{study.name}</h1><p>GLEE construct averages across imported participant responses.</p></div><button className="create-study-button" onClick={onImport}>+ Load response JSONs</button></div>{error && <div className="settings-alert">{error}</div>}<div className="dashboard-summary"><div><span className="dashboard-summary-label">Responses loaded</span><strong>{responses.length}</strong></div><div><span className="dashboard-summary-label">Scale</span><strong>1-7</strong></div><div><span className="dashboard-summary-label">Constructs measured</span><strong>{metrics.filter((metric) => metric.average !== null).length} / {metrics.length}</strong></div></div><div className="dashboard-board"><div className="dashboard-band game-band">GAME USER EXPERIENCE</div><div className="dashboard-band learning-band">LEARNING PROCESSES &amp; OUTCOMES</div><section className="dashboard-column design-column"><header><span>01</span><strong>DESIGN QUALITIES</strong></header>{dashboardGroups.design.map(renderMetric)}</section><section className="dashboard-column experiential-column"><header><span>02</span><strong>EXPERIENTIAL RESPONSES</strong></header>{dashboardGroups.experiential.map(renderMetric)}</section><section className="dashboard-column subjective-column"><header><span>03</span><strong>SUBJECTIVE PERCEPTIONS</strong></header>{dashboardGroups.subjective.map(renderMetric)}</section><section className="dashboard-column objective-column"><header><span>04</span><strong>OBJECTIVE OUTCOMES</strong></header><div className={`metric-card learning-gain-card ${learningGain ? "" : "unmeasured"}`}><span className="metric-icon">LG</span><div className="metric-card-copy"><h3>Learning Gain</h3>{learningGain ? <><strong className="metric-value">{learningGain.pre.toFixed(2)} <small>-&gt; {learningGain.post.toFixed(2)} / {learningGain.total}</small></strong><div className="metric-bar"><span style={{ width: `${Math.max(0, Math.min(100, (learningGain.post / learningGain.total) * 100))}%` }} /></div><span className="metric-meta">Gain {learningGain.gain >= 0 ? "+" : ""}{learningGain.gain.toFixed(2)} points</span></> : <span className="unmeasured-label">Not measured</span>}</div></div></section></div></div>;
+  return <div className="dashboard-wrap"><div className="dashboard-heading"><div><span className="overline">QUESTIONNAIRE DASHBOARD</span><h1>{study.name}</h1><p>GLEE construct averages across imported participant responses.</p></div><button className="create-study-button" onClick={onImport}>+ Load response JSONs</button></div>{error && <div className="settings-alert">{error}</div>}<div className="dashboard-summary"><div><span className="dashboard-summary-label">Responses loaded</span><strong>{responses.length}</strong></div><div><span className="dashboard-summary-label">Scale</span><strong>1-7</strong></div><div><span className="dashboard-summary-label">Constructs measured</span><strong>{metrics.filter((metric) => metric.average !== null).length} / {metrics.length}</strong></div></div><div className="dashboard-board"><div className="dashboard-band game-band">GAME USER EXPERIENCE</div><div className="dashboard-band learning-band">LEARNING PROCESSES &amp; OUTCOMES</div><section className="dashboard-column design-column"><header><span>01</span><strong>DESIGN QUALITIES</strong></header>{dashboardGroups.design.map(renderMetric)}</section><section className="dashboard-column experiential-column"><header><span>02</span><strong>EXPERIENTIAL RESPONSES</strong></header>{dashboardGroups.experiential.map(renderMetric)}</section><section className="dashboard-column subjective-column"><header><span>03</span><strong>SUBJECTIVE PERCEPTIONS</strong></header>{dashboardGroups.subjective.map(renderMetric)}</section><section className="dashboard-column objective-column"><header><span>04</span><strong>OBJECTIVE OUTCOMES</strong></header><div className={`metric-card learning-gain-card ${learningGain ? "" : "unmeasured"}`}><span className="metric-icon">LG</span><div className="metric-card-copy"><h3>Learning Gain</h3>{learningGain ? <><strong className="metric-value">{learningGain.pre.toFixed(2)} <small>-&gt; {learningGain.post.toFixed(2)} / {learningGain.total}</small></strong><div className="metric-bar"><span style={{ width: `${Math.max(0, Math.min(100, (learningGain.post / learningGain.total) * 100))}%` }} /></div><span className="metric-meta">Gain {learningGain.gain >= 0 ? "+" : ""}{learningGain.gain.toFixed(2)} points</span></> : <span className="unmeasured-label">Not measured</span>}</div></div></section></div><BackgroundLearningGainPanel responses={responses} study={study} /></div>;
 }
 
 function StudySettings({ study, updateStudy, error }: { study: Study; updateStudy: (field: keyof Study, value: string | boolean) => void; error: string }) {
