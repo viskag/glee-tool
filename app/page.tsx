@@ -1,142 +1,27 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-
-type SectionKey = "BACKGROUND" | "TEST" | "GAME_UX";
-type QuestionType = "Multiple choice" | "Likert scale" | "Short answer";
-
-type Question = {
-  id: string;
-  text: string;
-  type: QuestionType;
-  required: boolean;
-  objective: string;
-  bloom: string;
-  correct: string;
-  pair: string;
-  construct: string;
-  options: string[];
-};
-
-type Study = {
-  id: string;
-  name: string;
-  description: string;
-  gameName: string;
-  gameInstructions: string;
-  duration: string;
-  welcomeText: string;
-  anonymous: boolean;
-  consentRequired: boolean;
-  postTestRandomized: boolean;
-  displayMode: "one-at-a-time" | "section";
-};
-
-const initialStudy: Study = {
-  id: "phishing-quest",
-  name: "Phishing Quest",
-  description: "A serious game evaluation study about recognizing phishing attempts.",
-  gameName: "Phishing Quest",
-  gameInstructions: "Play the game as you normally would. The post-test will begin when your game session is complete.",
-  duration: "15 minutes",
-  welcomeText: "Thank you for taking part. This study explores what you learn and how the game feels to play.",
-  anonymous: true,
-  consentRequired: true,
-  postTestRandomized: true,
-  displayMode: "one-at-a-time",
-};
-
-type StudySummary = {
-  id: string;
-  name: string;
-  description: string;
-  status: "Draft" | "Published";
-  updated: string;
-  questions: number;
-};
-
-type QuestionnaireExport = {
-  format: "glee-questionnaire";
-  formatVersion: 1;
-  exportedAt: string;
-  study: Study;
-  questions: Record<SectionKey, Question[]>;
-};
-
-type QuestionnaireRecord = {
-  study: Study;
-  questions: Record<SectionKey, Question[]>;
-  published: boolean;
-};
-
-type ParticipantResponseExport = {
-  format: "glee-participant-response";
-  formatVersion: 1;
-  responseId: string;
-  submittedAt: string;
-  questionnaire: {
-    id: string;
-    name: string;
-    gameName: string;
-    description: string;
-    questions: Record<SectionKey, Question[]>;
-  };
-  answers: {
-    BACKGROUND: Record<string, string>;
-    PRE_TEST: Record<string, string>;
-    POST_TEST: Record<string, string>;
-    GAME_UX: Record<string, string>;
-  };
-  presentation: { displayMode: Study["displayMode"]; postTestRandomized: boolean };
-};
-
-type ConstructMetric = {
-  construct: string;
-  average: number | null;
-  answers: number;
-  participants: number;
-};
-
-const dashboardGroups = {
-  design: ["Ease of Control", "Progress Feedback", "Audiovisual Appeal", "Challenge", "Goals & Rules"],
-  experiential: ["Immersion", "Discovery", "Autonomy", "Relatedness", "Meaning", "Competence", "Narrativity", "Pleasure", "Arousal", "Dominance"],
-  subjective: ["Flow", "Game Acceptance", "Perceived Learning"],
-};
-
-const constructAliases: Record<string, string> = Object.values(dashboardGroups).flat().reduce((aliases, construct) => {
-  aliases[construct.toLowerCase().replace(/\s+/g, " ")] = construct;
-  return aliases;
-}, {} as Record<string, string>);
-
-const initialStudySummaries: StudySummary[] = [
-  { id: "phishing-quest", name: "Phishing Quest", description: "Recognizing phishing attempts", status: "Draft", updated: "Just now", questions: 4 },
-];
-
-const sectionInfo: Record<SectionKey, { label: string; eyebrow: string; detail: string }> = {
-  BACKGROUND: { label: "Background", eyebrow: "01", detail: "Participant context" },
-  TEST: { label: "Knowledge test", eyebrow: "02", detail: "Used before & after play" },
-  GAME_UX: { label: "Game UX", eyebrow: "03", detail: "Experience & GLEE measures" },
-};
-
-const initialQuestions: Record<SectionKey, Question[]> = {
-  BACKGROUND: [
-    { id: "BG_01", text: "How often do you play digital games?", type: "Multiple choice", required: true, objective: "", bloom: "", correct: "", pair: "", construct: "", options: ["Daily", "A few times a week", "A few times a month", "Rarely"] },
-  ],
-  TEST: [
-    { id: "TEST_Q_01", text: "Which action should you take when you encounter a suspicious email?", type: "Multiple choice", required: true, objective: "Identify phishing attempts", bloom: "Applying", correct: "Report it and avoid opening links", pair: "", construct: "Learning Gain", options: ["Reply to ask who sent it", "Report it and avoid opening links", "Forward it to a friend", "Download the attachment"] },
-    { id: "TEST_Q_02", text: "How confident are you in identifying a phishing attempt?", type: "Likert scale", required: true, objective: "", bloom: "", correct: "", pair: "", construct: "Learning Gain", options: ["1 - Completely disagree", "2 - Disagree", "3 - Slightly disagree", "4 - Neutral / neither agree nor disagree", "5 - Slightly agree", "6 - Agree", "7 - Completely agree"] },
-  ],
-  GAME_UX: [
-    { id: "UX_Q_01", text: "I was fully absorbed in the game.", type: "Likert scale", required: true, objective: "", bloom: "", correct: "", pair: "", construct: "Immersion", options: ["1 - Completely disagree", "2 - Disagree", "3 - Slightly disagree", "4 - Neutral / neither agree nor disagree", "5 - Slightly agree", "6 - Agree", "7 - Completely agree"] },
-  ],
-};
-
-const constructOptions = ["", "Ease of control", "Goals & rules", "Progress feedback", "Challenge", "Audiovisual appeal", "Competence", "Autonomy", "Discovery", "Immersion", "Meaning", "Narrativity", "Relatedness", "Pleasure", "Arousal", "Dominance", "Flow", "Perceived learning", "Game acceptance"];
-
-function normalizeQuestionnaireConstruct(value: string) {
-  const normalized = value.trim().toLowerCase().replace(/\s+/g, " ");
-  return constructOptions.find((option) => option.toLowerCase().replace(/\s+/g, " ") === normalized) ?? "";
-}
+import QuestionnaireLibrary from "../components/QuestionnaireLibrary";
+import PlayerLibrary from "../components/PlayerLibrary";
+import { buildParticipantResponse } from "../lib/participant";
+import {
+  constructAliases,
+  constructOptions,
+  dashboardGroups,
+  initialQuestions,
+  initialStudy,
+  initialStudySummaries,
+  normalizeQuestionnaireConstruct,
+  sectionInfo,
+  type ConstructMetric,
+  type ParticipantResponseExport,
+  type QuestionnaireExport,
+  type QuestionnaireRecord,
+  type Question,
+  type SectionKey,
+  type Study,
+  type StudySummary,
+} from "../lib/study-model";
 
 export default function Home() {
   const [activeSection, setActiveSection] = useState<SectionKey>("TEST");
@@ -165,6 +50,67 @@ export default function Home() {
   useEffect(() => {
     setQuestionnaireStore((current) => ({ ...current, [study.id]: { study, questions, published } }));
   }, [study, questions, published]);
+
+  useEffect(() => {
+    async function loadSavedStudies() {
+      try {
+        const response = await fetch("/api/studies");
+        const data = await response.json().catch(() => null);
+        if (!response.ok || !Array.isArray(data?.studies)) {
+          return;
+        }
+
+        const savedRecords = (data.studies as Record<string, any>[]).reduce<Record<string, QuestionnaireRecord>>(
+          (acc: Record<string, QuestionnaireRecord>, item: Record<string, any>) => {
+            const savedStudy: Study = {
+              id: String(item.id ?? ""),
+              name: String(item.name ?? "Untitled questionnaire"),
+              description: String(item.description ?? ""),
+              gameName: String(item.gameName ?? ""),
+              gameInstructions: String(item.gameInstructions ?? ""),
+              duration: String(item.duration ?? ""),
+              welcomeText: String(item.welcomeText ?? ""),
+              anonymous: Boolean(item.anonymous),
+              consentRequired: Boolean(item.consentRequired),
+              postTestRandomized: Boolean(item.postTestRandomized),
+              displayMode: item.displayMode === "section" ? "section" : "one-at-a-time",
+            };
+
+            const savedQuestions: Record<SectionKey, Question[]> = {
+              BACKGROUND: Array.isArray(item.questions?.BACKGROUND) ? (item.questions.BACKGROUND as Question[]) : [],
+              TEST: Array.isArray(item.questions?.TEST) ? (item.questions.TEST as Question[]) : [],
+              GAME_UX: Array.isArray(item.questions?.GAME_UX) ? (item.questions.GAME_UX as Question[]) : [],
+            };
+
+            acc[savedStudy.id] = {
+              study: savedStudy,
+              questions: savedQuestions,
+              published: Boolean(item.published),
+            };
+
+            return acc;
+          },
+          {} as Record<string, QuestionnaireRecord>
+        );
+
+        const savedSummaries: StudySummary[] = (Object.values(savedRecords) as QuestionnaireRecord[]).map((record) => ({
+          id: record.study.id,
+          name: record.study.name,
+          description: record.study.description || "No game description yet",
+          status: record.published ? "Published" : "Draft",
+          updated: "Just now",
+          questions: Object.values(record.questions).flat().length,
+        }));
+
+        setQuestionnaireStore((current) => ({ ...current, ...savedRecords }));
+        setStudySummaries(savedSummaries.length ? savedSummaries : initialStudySummaries);
+      } catch {
+        setStudySummaries((current) => current.length ? current : initialStudySummaries);
+      }
+    }
+
+    loadSavedStudies();
+  }, []);
 
   useEffect(() => {
     document.body.dataset.activeSection = activeSection;
@@ -249,12 +195,25 @@ export default function Home() {
 
   function createQuestionnaire() {
     const newStudy: Study = { ...initialStudy, id: `questionnaire-${Date.now()}`, name: "Untitled questionnaire", description: "", gameName: "", gameInstructions: "", duration: "", welcomeText: "" };
+    const defaultQuestions: Record<SectionKey, Question[]> = {
+      BACKGROUND: [
+        { id: `BG_${Date.now()}_01`, text: "How often do you play digital games?", type: "Multiple choice", required: true, objective: "", bloom: "", correct: "", pair: "", construct: "", options: ["Daily", "A few times a week", "A few times a month", "Rarely"] },
+      ],
+      TEST: [
+        { id: `TEST_${Date.now()}_01`, text: "Which action should you take when you encounter a suspicious email?", type: "Multiple choice", required: true, objective: "Identify phishing attempts", bloom: "Applying", correct: "Report it and avoid opening links", pair: "", construct: "Learning Gain", options: ["Reply to ask who sent it", "Report it and avoid opening links", "Forward it to a friend", "Download the attachment"] },
+      ],
+      GAME_UX: [
+        { id: `UX_${Date.now()}_01`, text: "I was fully absorbed in the game.", type: "Likert scale", required: true, objective: "", bloom: "", correct: "", pair: "", construct: "Immersion", options: ["1 - Completely disagree", "2 - Disagree", "3 - Slightly disagree", "4 - Neutral / neither agree nor disagree", "5 - Slightly agree", "6 - Agree", "7 - Completely agree"] },
+      ],
+    };
+
     setStudy(newStudy);
-    setQuestions({ BACKGROUND: [], TEST: [], GAME_UX: [] });
+    setQuestions(defaultQuestions);
     setActiveSection("TEST");
-    setSelectedId("");
+    setSelectedId(defaultQuestions.TEST[0]?.id ?? "");
     setPublished(false);
-    setStudySummaries((current) => [{ id: newStudy.id, name: newStudy.name, description: "New educational game evaluation", status: "Draft", updated: "Just now", questions: 0 }, ...current]);
+    setQuestionnaireStore((current) => ({ ...current, [newStudy.id]: { study: newStudy, questions: defaultQuestions, published: false } }));
+    setStudySummaries((current) => [{ id: newStudy.id, name: newStudy.name, description: "New educational game evaluation", status: "Draft", updated: "Just now", questions: Object.values(defaultQuestions).flat().length }, ...current]);
     setView("settings");
   }
 
@@ -320,7 +279,7 @@ export default function Home() {
     reader.readAsText(file);
   }
 
-  function publishStudy() {
+  async function publishStudy() {
     if (!study.name.trim()) {
       setPublishError("Add a study name before publishing.");
       setView("settings");
@@ -337,8 +296,43 @@ export default function Home() {
       setView("settings");
       return;
     }
-    setPublished(true);
-    setPublishError("");
+
+    const payload = {
+      id: study.id,
+      name: study.name,
+      description: study.description,
+      gameName: study.gameName,
+      gameInstructions: study.gameInstructions,
+      duration: study.duration,
+      welcomeText: study.welcomeText,
+      anonymous: study.anonymous,
+      consentRequired: study.consentRequired,
+      postTestRandomized: study.postTestRandomized,
+      displayMode: study.displayMode,
+      questions,
+      published,
+      updatedAt: new Date().toISOString(),
+    };
+
+    try {
+      const response = await fetch("/api/studies", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      const data = await response.json().catch(() => null);
+      if (!response.ok) {
+        throw new Error(data?.error || "Could not save this study to the database.");
+      }
+
+      setStudySummaries((current) => current.map((item) => item.id === study.id ? { ...item, name: study.name, description: study.description || "No game description yet", status: published ? "Published" : "Draft", updated: "Just now", questions: Object.values(questions).flat().length } : item));
+      setPublishError("");
+    } catch (error) {
+      setPublished(false);
+      setPublishError(error instanceof Error ? error.message : "Could not save this study to the database.");
+      setView("settings");
+    }
   }
 
   function startPlayer(id: string) {
@@ -355,7 +349,20 @@ export default function Home() {
     setView("player-preview");
   }
 
-  function saveParticipantResponse(response: ParticipantResponseExport) {
+  async function saveParticipantResponse(response: ParticipantResponseExport) {
+    try {
+      const databaseResponse = await fetch("/api/responses", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(response),
+      });
+      if (!databaseResponse.ok) {
+        throw new Error("Could not save participant response to MongoDB.");
+      }
+    } catch (error) {
+      console.error("Participant response database save failed:", error);
+    }
+
     const blob = new Blob([JSON.stringify(response, null, 2)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
@@ -365,11 +372,21 @@ export default function Home() {
     URL.revokeObjectURL(url);
   }
 
-  function openDashboard(id: string) {
+  async function openDashboard(id: string) {
     setDashboardStudyId(id);
     setDashboardResponses([]);
     setDashboardError("");
     setView("dashboard");
+    try {
+      const response = await fetch(`/api/responses?questionnaireId=${encodeURIComponent(id)}`);
+      const data = await response.json().catch(() => null);
+      if (!response.ok || !Array.isArray(data?.responses)) {
+        throw new Error(data?.error || "Could not load responses from MongoDB.");
+      }
+      setDashboardResponses(data.responses as ParticipantResponseExport[]);
+    } catch (error) {
+      setDashboardError(error instanceof Error ? error.message : "Could not load responses from MongoDB.");
+    }
   }
 
   async function importResponses(event: React.ChangeEvent<HTMLInputElement>) {
@@ -396,17 +413,18 @@ export default function Home() {
   return (
     <main className="app-shell">
       <aside className="sidebar">
-        <div className="brand"><span className="brand-mark">G</span><span>GLEE <small>studio</small></span></div>
+        <div className="brand"><span className="brand-mark">AP</span><span>GLEE <small>studio</small></span></div>
+        <nav className="main-nav top-level-nav"><button className={`nav-item ${view === "library" ? "active" : "muted"}`} onClick={() => setView("library")}><span className="nav-icon">::</span>Questionnaires <b>{studySummaries.length}</b></button><button className={`nav-item ${view === "player" ? "active" : "muted"}`} onClick={() => setView("player")}><span className="nav-icon">&gt;</span>Player view</button></nav>
         <div className="workspace-label">Workspace</div>
         <button className="study-mini" onClick={() => setView("library")}><div className="study-dot">{study.name.slice(0, 1).toUpperCase() || "S"}</div><div><strong>{study.name || "Untitled questionnaire"}</strong><span>{published ? "Published" : "Draft questionnaire"}</span></div><span className="chevron">v</span></button>
-        <nav className="main-nav"><button className={`nav-item ${view === "library" ? "active" : "muted"}`} onClick={() => setView("library")}><span className="nav-icon">::</span>Questionnaires <b>{studySummaries.length}</b></button><button className={`nav-item ${view === "dashboard" ? "active" : "muted"}`} onClick={() => openDashboard(study.id)}><span className="nav-icon">%</span>Dashboard</button><button className={`nav-item ${view === "player" ? "active" : "muted"}`} onClick={() => setView("player")}><span className="nav-icon">&gt;</span>Player view</button><button className={`nav-item ${view === "builder" ? "active" : "muted"}`} onClick={() => setView("builder")}><span className="nav-icon">[]</span>Editor</button><button className={`nav-item ${view === "settings" ? "active" : "muted"}`} onClick={() => setView("settings")}><span className="nav-icon">i</span>Questionnaire settings</button></nav>
-        <div className="sidebar-bottom"><div className="completion"><div className="completion-row"><span>Study completion</span><strong>{Math.round((totalQuestions / 8) * 100)}%</strong></div><div className="progress"><span style={{ width: `${Math.min((totalQuestions / 8) * 100, 100)}%` }} /></div><small>{totalQuestions} of 8 recommended questions</small></div><div className="user-chip"><span className="avatar">AR</span><span><strong>Alex Rivera</strong><small>Researcher</small></span><span className="more">...</span></div></div>
+        <nav className="main-nav sub-nav"><button className={`nav-item ${view === "settings" ? "active" : "muted"}`} onClick={() => setView("settings")}><span className="nav-icon">i</span>Info</button><button className={`nav-item ${view === "builder" ? "active" : "muted"}`} onClick={() => setView("builder")}><span className="nav-icon">[]</span>Editor</button><button className={`nav-item ${view === "dashboard" ? "active" : "muted"}`} onClick={() => openDashboard(study.id)}><span className="nav-icon">%</span>Dashboard</button></nav>
+        <div className="sidebar-bottom"><div className="user-chip"><span className="avatar">AR</span><span><strong>Alex Rivera</strong><small>Researcher</small></span><span className="more">...</span></div></div>
       </aside>
 
       <section className="workspace">
-        <header className="topbar"><div><span className="breadcrumb">{view === "library" || view === "player" ? "Workspace /" : `Questionnaires / ${study.name || "Untitled questionnaire"} /`}</span> <strong>{view === "library" ? "All questionnaires" : view === "player" ? "Participant questionnaires" : view === "dashboard" ? "Dashboard" : view === "builder" ? "Editor" : view === "settings" ? "Questionnaire settings" : view === "player-preview" ? "Participant session" : "Participant preview"}</strong></div><div className="top-actions"><span className={`save-state ${published ? "published" : ""}`}><span className="status-dot" />{published ? "Published" : "All changes saved"}</span>{view === "builder" && <button className="preview-button" onClick={() => setView("preview")}>Preview questionnaire<span>{"->"}</span></button>}{view === "preview" && <button className="preview-button" onClick={() => setView("builder")}>Back to editor<span>{"->"}</span></button>}{view === "settings" && <button className="preview-button" onClick={() => setView("builder")}>Back to editor<span>{"->"}</span></button>}{view === "dashboard" && <button className="preview-button" onClick={() => setView("library")}>Back to questionnaires<span>{"->"}</span></button>}{view !== "library" && view !== "player" && view !== "player-preview" && view !== "dashboard" && <button className="publish-button" onClick={publishStudy}>{published ? "Published" : "Publish questionnaire"}<span>^</span></button>}</div></header>
+        <header className="topbar"><div><span className="breadcrumb">{view === "library" || view === "player" ? "Workspace /" : `Questionnaires / ${study.name || "Untitled questionnaire"} /`}</span> <strong>{view === "library" ? "All questionnaires" : view === "player" ? "Participant questionnaires" : view === "dashboard" ? "Dashboard" : view === "builder" ? "Editor" : view === "settings" ? "Questionnaire settings" : view === "player-preview" ? "Participant session" : "Participant preview"}</strong></div><div className="top-actions"><span className={`save-state ${published ? "published" : ""}`}><span className="status-dot" />{published ? "Published" : "All changes saved"}</span>{view === "builder" && <button className="preview-button" onClick={() => setView("preview")}>Preview questionnaire<span>{"->"}</span></button>}{view === "preview" && <button className="preview-button" onClick={() => setView("builder")}>Back to editor<span>{"->"}</span></button>}{view === "settings" && <button className="preview-button" onClick={() => setView("builder")}>Back to editor<span>{"->"}</span></button>}{view === "dashboard" && <button className="preview-button" onClick={() => setView("library")}>Back to questionnaires<span>{"->"}</span></button>}{view !== "library" && view !== "player" && view !== "player-preview" && view !== "dashboard" && <button className="publish-button" onClick={publishStudy}>Create questionnaire<span>^</span></button>}</div></header>
 
-        {view === "library" ? <QuestionnaireLibrary questionnaires={studySummaries} onOpen={openQuestionnaire} onCreate={createQuestionnaire} onExport={exportQuestionnaire} onImport={() => importInputRef.current?.click()} onDashboard={openDashboard} error={publishError} /> : view === "dashboard" ? <Dashboard study={questionnaireStore[dashboardStudyId]?.study ?? (dashboardStudyId === initialStudy.id ? initialStudy : study)} responses={dashboardResponses} error={dashboardError} onImport={() => responseImportInputRef.current?.click()} /> : view === "player" ? <PlayerLibrary questionnaires={studySummaries} onStart={startPlayer} /> : view === "player-preview" && playerStudy && playerQuestions ? <ParticipantPreview questions={playerQuestions} study={playerStudy} onBack={() => setView("player")} onComplete={saveParticipantResponse} /> : view === "preview" ? <ParticipantPreview questions={questions} study={study} onBack={() => setView("builder")} /> : view === "settings" ? <StudySettings study={study} updateStudy={updateStudy} error={publishError} /> : <>
+        {view === "library" ? <QuestionnaireLibrary questionnaires={studySummaries} onOpen={openQuestionnaire} onCreate={createQuestionnaire} onExport={exportQuestionnaire} onImport={() => importInputRef.current?.click()} onDashboard={openDashboard} error={publishError} /> : view === "dashboard" ? <Dashboard study={questionnaireStore[dashboardStudyId]?.study ?? (dashboardStudyId === initialStudy.id ? initialStudy : study)} responses={dashboardResponses} error={dashboardError} onRefresh={() => openDashboard(dashboardStudyId)} onImport={() => responseImportInputRef.current?.click()} /> : view === "player" ? <PlayerLibrary questionnaires={studySummaries} onStart={startPlayer} /> : view === "player-preview" && playerStudy && playerQuestions ? <ParticipantPreview questions={playerQuestions} study={playerStudy} onBack={() => setView("player")} onComplete={saveParticipantResponse} /> : view === "preview" ? <ParticipantPreview questions={questions} study={study} onBack={() => setView("builder")} /> : view === "settings" ? <StudySettings study={study} published={published} updateStudy={updateStudy} onTogglePublished={() => setPublished((current) => !current)} error={publishError} /> : <>
           <div className="page-heading"><div><div className="overline">QUESTIONNAIRE BUILDER</div><h1>Build your study</h1><p>Structure the moments that turn gameplay into evidence.</p></div><div className="heading-meta"><span className="meta-icon">{study.name.slice(0, 1).toUpperCase() || "S"}</span><div><strong>{study.name || "Untitled study"}</strong><span>{study.gameName || "Serious game evaluation"}</span></div><button className="edit-title" onClick={() => setView("settings")}>Edit</button></div></div>
           <div className="builder-layout">
             <div className="section-column"><div className="column-heading"><div><span className="overline">STUDY FLOW</span><h2>Sections</h2></div><button className="icon-button" aria-label="Add section">+</button></div><div className="section-list">{(Object.keys(sectionInfo) as SectionKey[]).map((section) => <button key={section} className={`section-card ${activeSection === section ? "selected" : ""}`} onClick={() => selectSection(section)}><span className="section-number">{sectionInfo[section].eyebrow}</span><span className="section-copy"><strong>{sectionInfo[section].label}</strong><small>{sectionInfo[section].detail}</small></span><span className="section-count">{questions[section].length}</span></button>)}</div><div className="flow-note"><span className="spark">*</span><div><strong>One test, two moments</strong><p>The knowledge test is authored once, then reused after play with randomized question and answer order.</p></div></div></div>
@@ -419,14 +437,6 @@ export default function Home() {
       <input ref={responseImportInputRef} className="file-input" type="file" multiple accept="application/json,.json" onChange={importResponses} />
     </main>
   );
-}
-
-function QuestionnaireLibrary({ questionnaires, onOpen, onCreate, onExport, onImport, onDashboard, error }: { questionnaires: StudySummary[]; onOpen: (id: string) => void; onCreate: () => void; onExport: () => void; onImport: () => void; onDashboard: (id: string) => void; error: string }) {
-  return <div className="library-wrap"><div className="library-heading"><div><span className="overline">GLEE WORKSPACE</span><h1>Your questionnaires</h1><p>One evaluation questionnaire for each educational game.</p></div><div className="library-actions"><button className="secondary-action" onClick={onImport}>Load JSON</button><button className="secondary-action" onClick={onExport}>Save current JSON</button><button className="create-study-button" onClick={onCreate}>+ New questionnaire</button></div></div>{error && <div className="settings-alert">{error}</div>}<div className="library-toolbar"><span>{questionnaires.length} questionnaires</span><span className="library-hint">Select a questionnaire to edit its Background, Knowledge test, and Game UX flow.</span></div><div className="study-grid">{questionnaires.map((questionnaire) => <div className="study-card" key={questionnaire.id}><button className="study-card-open" onClick={() => onOpen(questionnaire.id)}><div className="study-card-top"><span className="study-card-mark">{questionnaire.name.slice(0, 1).toUpperCase() || "Q"}</span><span className={`study-status ${questionnaire.status.toLowerCase()}`}>{questionnaire.status}</span></div><div className="study-card-copy"><h2>{questionnaire.name}</h2><p>{questionnaire.description || "No game description yet"}</p></div><div className="study-card-meta"><span>{questionnaire.questions} questions</span><span>Updated {questionnaire.updated}</span><span className="card-arrow">{"->"}</span></div></button><button className="study-card-dashboard" onClick={() => onDashboard(questionnaire.id)}>Open dashboard</button></div>)}<button className="new-study-card" onClick={onCreate}><span>+</span><strong>Evaluate another game</strong><small>Create a separate questionnaire</small></button></div></div>;
-}
-
-function PlayerLibrary({ questionnaires, onStart }: { questionnaires: StudySummary[]; onStart: (id: string) => void }) {
-  return <div className="player-library-wrap"><div className="player-library-heading"><span className="overline">PARTICIPANT SPACE</span><h1>Choose a questionnaire</h1><p>Select the educational game evaluation you have been invited to complete.</p></div><div className="player-questionnaire-grid">{questionnaires.map((questionnaire) => <button className="player-questionnaire-card" key={questionnaire.id} onClick={() => onStart(questionnaire.id)}><span className="player-card-mark">{questionnaire.name.slice(0, 1).toUpperCase() || "Q"}</span><div><h2>{questionnaire.name}</h2><p>{questionnaire.description || "Serious game evaluation"}</p><small>{questionnaire.questions} questions · {questionnaire.status === "Published" ? "Available now" : "Preview study"}</small></div><span className="player-card-arrow">{"->"}</span></button>)}</div></div>;
 }
 
 function parseLikertValue(answer: string) {
@@ -541,32 +551,18 @@ function BackgroundLearningGainPanel({ responses, study }: { responses: Particip
   return <section className="background-gain-panel"><div className="background-gain-heading"><div><span className="overline">OBJECTIVE OUTCOMES / LEARNING GAIN</span><h2>Learning gain by participant group</h2><p>Groups are created from Background answers. Scores use the number of scored Knowledge Test questions.</p></div><span className="gain-legend"><i className="pre-dot" /> Pre-test <i className="post-dot" /> Post-test</span></div>{groups.length ? <div className="gain-group-grid">{groups.map((group) => <article className="gain-group-card" key={`${group.question}-${group.answer}`}><div className="gain-group-title"><span>{group.answer}</span><small>{group.participants} participant{group.participants === 1 ? "" : "s"}</small></div><div className="gain-bars"><div className="gain-bar-row"><span>PRE</span><div><i style={{ width: `${Math.min(100, (group.pre / denominator) * 100)}%` }} /></div><strong>{group.pre.toFixed(2)}</strong></div><div className="gain-bar-row"><span>POST</span><div><i className="post-bar" style={{ width: `${Math.min(100, (group.post / denominator) * 100)}%` }} /></div><strong>{group.post.toFixed(2)}</strong></div></div><div className="gain-group-footer"><strong>{group.gain >= 0 ? "+" : ""}{group.gain.toFixed(2)} points</strong><span>SD {group.preSd.toFixed(2)} / {group.postSd.toFixed(2)}</span></div></article>)}</div> : <div className="background-gain-empty">Load participant response JSONs to compare learning gain across Background groups.</div>}</section>;
 }
 
-function Dashboard({ study, responses, error, onImport }: { study: Study; responses: ParticipantResponseExport[]; error: string; onImport: () => void }) {
+function Dashboard({ study, responses, error, onRefresh, onImport }: { study: Study; responses: ParticipantResponseExport[]; error: string; onRefresh: () => void; onImport: () => void }) {
   const metrics = calculateConstructMetrics(responses);
   const learningGain = calculateLearningGain(responses);
   const renderMetric = (construct: string) => {
     const metric = metrics.find((item) => item.construct === construct);
     return <div className={`metric-card ${metric?.average == null ? "unmeasured" : ""}`} key={construct}><span className="metric-icon">{construct.slice(0, 2).toUpperCase()}</span><div className="metric-card-copy"><h3>{construct}</h3>{metric?.average == null ? <span className="unmeasured-label">Not measured</span> : <><strong className="metric-value">{metric.average.toFixed(2)}<small>/ 7</small></strong><div className="metric-bar"><span style={{ width: `${(metric.average / 7) * 100}%` }} /></div></>}</div></div>;
   };
-  return <div className="dashboard-wrap"><div className="dashboard-heading"><div><span className="overline">QUESTIONNAIRE DASHBOARD</span><h1>{study.name}</h1><p>GLEE construct averages across imported participant responses.</p></div><button className="create-study-button" onClick={onImport}>+ Load response JSONs</button></div>{error && <div className="settings-alert">{error}</div>}<div className="dashboard-summary"><div><span className="dashboard-summary-label">Responses loaded</span><strong>{responses.length}</strong></div><div><span className="dashboard-summary-label">Scale</span><strong>1-7</strong></div><div><span className="dashboard-summary-label">Constructs measured</span><strong>{metrics.filter((metric) => metric.average !== null).length} / {metrics.length}</strong></div></div><div className="dashboard-board"><div className="dashboard-band game-band">GAME USER EXPERIENCE</div><div className="dashboard-band learning-band">LEARNING PROCESSES &amp; OUTCOMES</div><section className="dashboard-column design-column"><header><span>01</span><strong>DESIGN QUALITIES</strong></header>{dashboardGroups.design.map(renderMetric)}</section><section className="dashboard-column experiential-column"><header><span>02</span><strong>EXPERIENTIAL RESPONSES</strong></header>{dashboardGroups.experiential.map(renderMetric)}</section><section className="dashboard-column subjective-column"><header><span>03</span><strong>SUBJECTIVE PERCEPTIONS</strong></header>{dashboardGroups.subjective.map(renderMetric)}</section><section className="dashboard-column objective-column"><header><span>04</span><strong>OBJECTIVE OUTCOMES</strong></header><div className={`metric-card learning-gain-card ${learningGain ? "" : "unmeasured"}`}><span className="metric-icon">LG</span><div className="metric-card-copy"><h3>Learning Gain</h3>{learningGain ? <><strong className="metric-value">{learningGain.pre.toFixed(2)} <small>-&gt; {learningGain.post.toFixed(2)} / {learningGain.total}</small></strong><div className="metric-bar"><span style={{ width: `${Math.max(0, Math.min(100, (learningGain.post / learningGain.total) * 100))}%` }} /></div><span className="metric-meta">Gain {learningGain.gain >= 0 ? "+" : ""}{learningGain.gain.toFixed(2)} points</span></> : <span className="unmeasured-label">Not measured</span>}</div></div></section></div><BackgroundLearningGainPanel responses={responses} study={study} /></div>;
+  return <div className="dashboard-wrap"><div className="dashboard-heading"><div><span className="overline">QUESTIONNAIRE DASHBOARD</span><h1>{study.name}</h1><p>GLEE construct averages across database responses.</p></div><div className="library-actions"><button className="create-study-button" onClick={onRefresh}>Refresh database</button><button className="secondary-action" onClick={onImport}>Load response JSONs</button></div></div>{error && <div className="settings-alert">{error}</div>}<div className="dashboard-summary"><div><span className="dashboard-summary-label">Responses loaded</span><strong>{responses.length}</strong></div><div><span className="dashboard-summary-label">Scale</span><strong>1-7</strong></div><div><span className="dashboard-summary-label">Constructs measured</span><strong>{metrics.filter((metric) => metric.average !== null).length} / {metrics.length}</strong></div></div><div className="dashboard-board"><div className="dashboard-band game-band">GAME USER EXPERIENCE</div><div className="dashboard-band learning-band">LEARNING PROCESSES &amp; OUTCOMES</div><section className="dashboard-column design-column"><header><span>01</span><strong>DESIGN QUALITIES</strong></header>{dashboardGroups.design.map(renderMetric)}</section><section className="dashboard-column experiential-column"><header><span>02</span><strong>EXPERIENTIAL RESPONSES</strong></header>{dashboardGroups.experiential.map(renderMetric)}</section><section className="dashboard-column subjective-column"><header><span>03</span><strong>SUBJECTIVE PERCEPTIONS</strong></header>{dashboardGroups.subjective.map(renderMetric)}</section><section className="dashboard-column objective-column"><header><span>04</span><strong>OBJECTIVE OUTCOMES</strong></header><div className={`metric-card learning-gain-card ${learningGain ? "" : "unmeasured"}`}><span className="metric-icon">LG</span><div className="metric-card-copy"><h3>Learning Gain</h3>{learningGain ? <><strong className="metric-value">{learningGain.pre.toFixed(2)} <small>-&gt; {learningGain.post.toFixed(2)} / {learningGain.total}</small></strong><div className="metric-bar"><span style={{ width: `${Math.max(0, Math.min(100, (learningGain.post / learningGain.total) * 100))}%` }} /></div><span className="metric-meta">Gain {learningGain.gain >= 0 ? "+" : ""}{learningGain.gain.toFixed(2)} points</span></> : <span className="unmeasured-label">Not measured</span>}</div></div></section></div><BackgroundLearningGainPanel responses={responses} study={study} /></div>;
 }
 
-function StudySettings({ study, updateStudy, error }: { study: Study; updateStudy: (field: keyof Study, value: string | boolean) => void; error: string }) {
-  return <div className="settings-wrap"><div className="settings-heading"><div><span className="overline">STUDY SETTINGS</span><h1>Shape the study</h1><p>Give participants the context they need, and keep the evaluation flow consistent.</p></div><span className="settings-badge">GLEE / MVP</span></div>{error && <div className="settings-alert">{error}</div>}<div className="settings-grid"><div className="settings-main"><section className="settings-card"><div className="settings-card-heading"><div><span className="settings-number">01</span><h2>Study overview</h2></div><span>Visible to participants</span></div><label className="field-label">Study name<input value={study.name} onChange={(event) => updateStudy("name", event.target.value)} placeholder="e.g. Phishing Quest" /></label><label className="field-label">Description<textarea value={study.description} onChange={(event) => updateStudy("description", event.target.value)} /></label><div className="field-grid"><label className="field-label">Game name<input value={study.gameName} onChange={(event) => updateStudy("gameName", event.target.value)} /></label><label className="field-label">Estimated duration<input value={study.duration} onChange={(event) => updateStudy("duration", event.target.value)} placeholder="e.g. 20 minutes" /></label></div></section><section className="settings-card"><div className="settings-card-heading"><div><span className="settings-number">02</span><h2>Participant welcome</h2></div><span>Shown before Background</span></div><label className="field-label">Introduction text<textarea value={study.welcomeText} onChange={(event) => updateStudy("welcomeText", event.target.value)} /></label><label className="field-label">Game instructions<textarea value={study.gameInstructions} onChange={(event) => updateStudy("gameInstructions", event.target.value)} /></label></section></div><div className="settings-side"><section className="settings-card"><div className="settings-card-heading"><div><span className="settings-number">03</span><h2>Participant access</h2></div></div><label className="setting-toggle"><span><strong>Anonymous participation</strong><small>Do not require names or email addresses</small></span><button className={`toggle ${study.anonymous ? "on" : ""}`} onClick={() => updateStudy("anonymous", !study.anonymous)} aria-label="Toggle anonymous participation"><span /></button></label><label className="setting-toggle"><span><strong>Require consent</strong><small>Ask for agreement before starting</small></span><button className={`toggle ${study.consentRequired ? "on" : ""}`} onClick={() => updateStudy("consentRequired", !study.consentRequired)} aria-label="Toggle consent requirement"><span /></button></label></section><section className="settings-card"><div className="settings-card-heading"><div><span className="settings-number">04</span><h2>Study flow</h2></div></div><div className="flow-setting"><span className="flow-icon">01</span><div><strong>Background</strong><small>Before the knowledge test</small></div><span className="flow-fixed">ON</span></div><div className="flow-setting"><span className="flow-icon">02</span><div><strong>Knowledge test</strong><small>Before and after game play</small></div><span className="flow-fixed">2x</span></div><div className="flow-setting"><span className="flow-icon">03</span><div><strong>Game UX</strong><small>After the game session</small></div><span className="flow-fixed">ON</span></div><div className="display-mode-setting"><span><strong>Participant display</strong><small>Choose whether answers stay focused or appear by section</small></span><select value={study.displayMode} onChange={(event) => updateStudy("displayMode", event.target.value as Study["displayMode"])}><option value="one-at-a-time">One question at a time</option><option value="section">Entire section</option></select></div><label className="setting-toggle flow-toggle"><span><strong>Randomize post-test</strong><small>Shuffle questions and answer options</small></span><button className={`toggle ${study.postTestRandomized ? "on" : ""}`} onClick={() => updateStudy("postTestRandomized", !study.postTestRandomized)} aria-label="Toggle post-test randomization"><span /></button></label></section></div></div></div>;
-}
-
-function buildParticipantResponse(study: Study, questions: Record<SectionKey, Question[]>, answers: Record<string, string>): ParticipantResponseExport {
-  const responseAnswers: ParticipantResponseExport["answers"] = { BACKGROUND: {}, PRE_TEST: {}, POST_TEST: {}, GAME_UX: {} };
-  Object.entries(answers).forEach(([key, value]) => {
-    const separator = key.indexOf(":");
-    const phase = key.slice(0, separator);
-    const questionId = key.slice(separator + 1);
-    if (phase === "background") responseAnswers.BACKGROUND[questionId] = value;
-    if (phase === "pre-test") responseAnswers.PRE_TEST[questionId] = value;
-    if (phase === "post-test") responseAnswers.POST_TEST[questionId] = value;
-    if (phase === "game-ux") responseAnswers.GAME_UX[questionId] = value;
-  });
-  return { format: "glee-participant-response", formatVersion: 1, responseId: `response-${Date.now()}`, submittedAt: new Date().toISOString(), questionnaire: { id: study.id, name: study.name, gameName: study.gameName, description: study.description, questions }, answers: responseAnswers, presentation: { displayMode: study.displayMode, postTestRandomized: study.postTestRandomized } };
+function StudySettings({ study, published, updateStudy, onTogglePublished, error }: { study: Study; published: boolean; updateStudy: (field: keyof Study, value: string | boolean) => void; onTogglePublished: () => void; error: string }) {
+  return <div className="settings-wrap"><div className="settings-heading"><div><span className="overline">STUDY SETTINGS</span><h1>Shape the study</h1><p>Give participants the context they need, and keep the evaluation flow consistent.</p></div><span className="settings-badge">GLEE / MVP</span></div>{error && <div className="settings-alert">{error}</div>}<div className="settings-grid"><div className="settings-main"><section className="settings-card"><div className="settings-card-heading"><div><span className="settings-number">01</span><h2>Study overview</h2></div><span>Visible to participants</span></div><label className="field-label">Study name<input value={study.name} onChange={(event) => updateStudy("name", event.target.value)} placeholder="e.g. Phishing Quest" /></label><label className="field-label">Description<textarea value={study.description} onChange={(event) => updateStudy("description", event.target.value)} /></label><div className="field-grid"><label className="field-label">Game name<input value={study.gameName} onChange={(event) => updateStudy("gameName", event.target.value)} /></label><label className="field-label">Estimated duration<input value={study.duration} onChange={(event) => updateStudy("duration", event.target.value)} placeholder="e.g. 20 minutes" /></label></div></section><section className="settings-card"><div className="settings-card-heading"><div><span className="settings-number">02</span><h2>Participant welcome</h2></div><span>Shown before Background</span></div><label className="field-label">Introduction text<textarea value={study.welcomeText} onChange={(event) => updateStudy("welcomeText", event.target.value)} /></label><label className="field-label">Game instructions<textarea value={study.gameInstructions} onChange={(event) => updateStudy("gameInstructions", event.target.value)} /></label></section></div><div className="settings-side"><section className="settings-card"><div className="settings-card-heading"><div><span className="settings-number">03</span><h2>Participant access</h2></div></div><label className="setting-toggle"><span><strong>Published / active</strong><small>Allow this study to be available in the participant flow</small></span><button className={`toggle ${published ? "on" : ""}`} onClick={onTogglePublished} aria-label="Toggle published status"><span /></button></label><label className="setting-toggle"><span><strong>Anonymous participation</strong><small>Do not require names or email addresses</small></span><button className={`toggle ${study.anonymous ? "on" : ""}`} onClick={() => updateStudy("anonymous", !study.anonymous)} aria-label="Toggle anonymous participation"><span /></button></label><label className="setting-toggle"><span><strong>Require consent</strong><small>Ask for agreement before starting</small></span><button className={`toggle ${study.consentRequired ? "on" : ""}`} onClick={() => updateStudy("consentRequired", !study.consentRequired)} aria-label="Toggle consent requirement"><span /></button></label></section><section className="settings-card"><div className="settings-card-heading"><div><span className="settings-number">04</span><h2>Study flow</h2></div></div><div className="flow-setting"><span className="flow-icon">01</span><div><strong>Background</strong><small>Before the knowledge test</small></div><span className="flow-fixed">ON</span></div><div className="flow-setting"><span className="flow-icon">02</span><div><strong>Knowledge test</strong><small>Before and after game play</small></div><span className="flow-fixed">2x</span></div><div className="flow-setting"><span className="flow-icon">03</span><div><strong>Game UX</strong><small>After the game session</small></div><span className="flow-fixed">ON</span></div><div className="display-mode-setting"><span><strong>Participant display</strong><small>Choose whether answers stay focused or appear by section</small></span><select value={study.displayMode} onChange={(event) => updateStudy("displayMode", event.target.value as Study["displayMode"])}><option value="one-at-a-time">One question at a time</option><option value="section">Entire section</option></select></div><label className="setting-toggle flow-toggle"><span><strong>Randomize post-test</strong><small>Shuffle questions and answer options</small></span><button className={`toggle ${study.postTestRandomized ? "on" : ""}`} onClick={() => updateStudy("postTestRandomized", !study.postTestRandomized)} aria-label="Toggle post-test randomization"><span /></button></label></section></div></div></div>;
 }
 
 function SectionParticipantPreview({ questions, study, onBack, onComplete }: { questions: Record<SectionKey, Question[]>; study: Study; onBack: () => void; onComplete?: (response: ParticipantResponseExport) => void }) {

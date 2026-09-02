@@ -9,6 +9,8 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "mongodb": "^7.6.0",
+    "mysql2": "^3.24.3",
     "next": "latest",
     "react": "latest",
     "react-dom": "latest"
