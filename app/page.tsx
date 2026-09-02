@@ -28,6 +28,7 @@ export default function Home() {
   const [questions, setQuestions] = useState(initialQuestions);
   const [selectedId, setSelectedId] = useState("TEST_Q_01");
   const [view, setView] = useState<"library" | "builder" | "preview" | "settings" | "player" | "player-preview" | "dashboard">("library");
+  const [studyPickerOpen, setStudyPickerOpen] = useState(false);
   const [published, setPublished] = useState(false);
   const [study, setStudy] = useState(initialStudy);
   const [studySummaries, setStudySummaries] = useState(initialStudySummaries);
@@ -35,6 +36,7 @@ export default function Home() {
     [initialStudy.id]: { study: initialStudy, questions: initialQuestions, published: false },
   });
   const [publishError, setPublishError] = useState("");
+  const [creationSuccess, setCreationSuccess] = useState("");
   const [playerStudy, setPlayerStudy] = useState<Study | null>(null);
   const [playerQuestions, setPlayerQuestions] = useState<Record<SectionKey, Question[]> | null>(null);
   const [dashboardResponses, setDashboardResponses] = useState<ParticipantResponseExport[]>([]);
@@ -235,6 +237,19 @@ export default function Home() {
     setView("builder");
   }
 
+  function selectWorkingQuestionnaire(id: string) {
+    const summary = studySummaries.find((item) => item.id === id);
+    if (!summary) return;
+    const record = questionnaireStore[id];
+    setStudy(record?.study ?? { ...initialStudy, id: summary.id, name: summary.name, description: summary.description, gameName: summary.name });
+    setQuestions(record?.questions ?? { BACKGROUND: [], TEST: [], GAME_UX: [] });
+    setPublished(record?.published ?? summary.status === "Published");
+    setActiveSection("TEST");
+    setSelectedId(record?.questions.TEST[0]?.id ?? "");
+    setDashboardStudyId(id);
+    setStudyPickerOpen(false);
+  }
+
   function exportQuestionnaire() {
     const payload: QuestionnaireExport = { format: "glee-questionnaire", formatVersion: 1, exportedAt: new Date().toISOString(), study, questions };
     const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
@@ -280,6 +295,7 @@ export default function Home() {
   }
 
   async function publishStudy() {
+    setCreationSuccess("");
     if (!study.name.trim()) {
       setPublishError("Add a study name before publishing.");
       setView("settings");
@@ -328,6 +344,8 @@ export default function Home() {
 
       setStudySummaries((current) => current.map((item) => item.id === study.id ? { ...item, name: study.name, description: study.description || "No game description yet", status: published ? "Published" : "Draft", updated: "Just now", questions: Object.values(questions).flat().length } : item));
       setPublishError("");
+      setCreationSuccess(`${study.name} was created successfully.`);
+      setView("builder");
     } catch (error) {
       setPublished(false);
       setPublishError(error instanceof Error ? error.message : "Could not save this study to the database.");
@@ -416,12 +434,13 @@ export default function Home() {
         <div className="brand"><span className="brand-mark">AP</span><span>GLEE <small>studio</small></span></div>
         <nav className="main-nav top-level-nav"><button className={`nav-item ${view === "library" ? "active" : "muted"}`} onClick={() => setView("library")}><span className="nav-icon">::</span>Questionnaires <b>{studySummaries.length}</b></button><button className={`nav-item ${view === "player" ? "active" : "muted"}`} onClick={() => setView("player")}><span className="nav-icon">&gt;</span>Player view</button></nav>
         <div className="workspace-label">Workspace</div>
-        <button className="study-mini" onClick={() => setView("library")}><div className="study-dot">{study.name.slice(0, 1).toUpperCase() || "S"}</div><div><strong>{study.name || "Untitled questionnaire"}</strong><span>{published ? "Published" : "Draft questionnaire"}</span></div><span className="chevron">v</span></button>
+        <div className="study-picker"><button className="study-mini" onClick={() => setStudyPickerOpen((current) => !current)} aria-expanded={studyPickerOpen}><div className="study-dot">{study.name.slice(0, 1).toUpperCase() || "S"}</div><div><strong>{study.name || "Untitled questionnaire"}</strong><span>{published ? "Published" : "Draft questionnaire"}</span></div><span className="chevron">{studyPickerOpen ? "^" : "v"}</span></button>{studyPickerOpen && <div className="study-picker-menu">{studySummaries.map((questionnaire) => <button key={questionnaire.id} className={`study-picker-option ${questionnaire.id === study.id ? "selected" : ""}`} onClick={() => selectWorkingQuestionnaire(questionnaire.id)}><span className="study-picker-mark">{questionnaire.name.slice(0, 1).toUpperCase() || "S"}</span><span><strong>{questionnaire.name}</strong><small>{questionnaire.status} · {questionnaire.questions} questions</small></span></button>)}</div>}</div>
         <nav className="main-nav sub-nav"><button className={`nav-item ${view === "settings" ? "active" : "muted"}`} onClick={() => setView("settings")}><span className="nav-icon">i</span>Info</button><button className={`nav-item ${view === "builder" ? "active" : "muted"}`} onClick={() => setView("builder")}><span className="nav-icon">[]</span>Editor</button><button className={`nav-item ${view === "dashboard" ? "active" : "muted"}`} onClick={() => openDashboard(study.id)}><span className="nav-icon">%</span>Dashboard</button></nav>
         <div className="sidebar-bottom"><div className="user-chip"><span className="avatar">AR</span><span><strong>Alex Rivera</strong><small>Researcher</small></span><span className="more">...</span></div></div>
       </aside>
 
       <section className="workspace">
+        {creationSuccess && <div className="creation-success" role="status">{creationSuccess}</div>}
         <header className="topbar"><div><span className="breadcrumb">{view === "library" || view === "player" ? "Workspace /" : `Questionnaires / ${study.name || "Untitled questionnaire"} /`}</span> <strong>{view === "library" ? "All questionnaires" : view === "player" ? "Participant questionnaires" : view === "dashboard" ? "Dashboard" : view === "builder" ? "Editor" : view === "settings" ? "Questionnaire settings" : view === "player-preview" ? "Participant session" : "Participant preview"}</strong></div><div className="top-actions"><span className={`save-state ${published ? "published" : ""}`}><span className="status-dot" />{published ? "Published" : "All changes saved"}</span>{view === "builder" && <button className="preview-button" onClick={() => setView("preview")}>Preview questionnaire<span>{"->"}</span></button>}{view === "preview" && <button className="preview-button" onClick={() => setView("builder")}>Back to editor<span>{"->"}</span></button>}{view === "settings" && <button className="preview-button" onClick={() => setView("builder")}>Back to editor<span>{"->"}</span></button>}{view === "dashboard" && <button className="preview-button" onClick={() => setView("library")}>Back to questionnaires<span>{"->"}</span></button>}{view !== "library" && view !== "player" && view !== "player-preview" && view !== "dashboard" && <button className="publish-button" onClick={publishStudy}>Create questionnaire<span>^</span></button>}</div></header>
 
         {view === "library" ? <QuestionnaireLibrary questionnaires={studySummaries} onOpen={openQuestionnaire} onCreate={createQuestionnaire} onExport={exportQuestionnaire} onImport={() => importInputRef.current?.click()} onDashboard={openDashboard} error={publishError} /> : view === "dashboard" ? <Dashboard study={questionnaireStore[dashboardStudyId]?.study ?? (dashboardStudyId === initialStudy.id ? initialStudy : study)} responses={dashboardResponses} error={dashboardError} onRefresh={() => openDashboard(dashboardStudyId)} onImport={() => responseImportInputRef.current?.click()} /> : view === "player" ? <PlayerLibrary questionnaires={studySummaries} onStart={startPlayer} /> : view === "player-preview" && playerStudy && playerQuestions ? <ParticipantPreview questions={playerQuestions} study={playerStudy} onBack={() => setView("player")} onComplete={saveParticipantResponse} /> : view === "preview" ? <ParticipantPreview questions={questions} study={study} onBack={() => setView("builder")} /> : view === "settings" ? <StudySettings study={study} published={published} updateStudy={updateStudy} onTogglePublished={() => setPublished((current) => !current)} error={publishError} /> : <>

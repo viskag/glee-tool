@@ -118,3 +118,41 @@ body[data-active-section="GAME_UX"] .metadata-block:not(.glee-block) .field-grid
 .flow-setting div { flex:1; display:grid; gap:4px; }.flow-setting strong { font-size:10px; }.flow-setting small { color:var(--muted); font-size:9px; }.flow-fixed { color:var(--green); font:500 9px 'IBM Plex Mono'; }
 .flow-toggle { margin-top:4px; }
 @media (max-width:720px) { .settings-wrap { padding:38px 22px 50px; }.settings-heading { display:block; }.settings-badge { display:inline-block; margin-top:20px; }.settings-grid { display:block; }.settings-side { margin-top:18px; }.settings-card { padding:19px; } }
+
+/* Editorial AP treatment: quiet surfaces, strong red anchors, and practical controls. */
+body { background:#f2f2f0; }
+h1, h2, h3, .page-heading h1, .preview-top h1, .library-heading h1, .settings-heading h1, .dashboard-heading h1, .player-library-heading h1 { font-family:'Barlow Condensed', sans-serif; font-weight:600; letter-spacing:0; }
+.topbar { background:#fff; backdrop-filter:none; }
+.workspace-label,.overline { color:#777; font-family:'IBM Plex Mono', monospace; }
+.publish-button,.create-study-button { background:var(--brand-red); border-radius:0; box-shadow:none; }
+.publish-button:hover,.create-study-button:hover { background:var(--brand-red-dark); }
+.secondary-action,.preview-close { border-radius:0; color:var(--brand-red); }
+.study-card,.new-study-card,.question-row,.settings-card,.participant-card { box-shadow:none; border-radius:0; }
+.study-card:hover,.new-study-card:hover,.player-questionnaire-card:hover { border-color:var(--brand-red); transform:none; }
+.study-card-mark,.meta-icon { background:var(--brand-red); color:#fff; border-radius:0; }
+.study-status { border-radius:0; background:#fce8e8; color:var(--brand-red-dark); }
+.section-card.selected { background:#fff; border-left:4px solid var(--brand-red); border-color:#ddd; box-shadow:none; }
+.add-question { border-radius:0; background:#fce8e8; color:var(--brand-red-dark); }
+.question-row.selected { border-color:var(--brand-red); box-shadow:inset 4px 0 0 var(--brand-red); }
+.dashboard-band { border-radius:0; background:var(--brand-red); font-family:'Barlow Condensed', sans-serif; font-size:15px; letter-spacing:.04em; }
+.dashboard-column,.dashboard-summary > div,.background-gain-panel { border-radius:0; background:#fff; }
+.dashboard-column .metric-card,.gain-group-card { border-radius:0; box-shadow:none; }
+.dashboard-column .metric-card { border-left:3px solid var(--brand-red); }
+.flow-icon { border-radius:0; background:#fce8e8; color:var(--brand-red-dark); }
+.toggle { border-radius:0; }
+.toggle span { border-radius:0; }
+.participant-card { border-top:6px solid var(--brand-red); }
+.study-card { padding-bottom:68px; }
+.study-card-meta { padding-bottom:8px; }
+.study-card-dashboard { right:19px; bottom:14px; }
+.study-dot,.player-card-mark { background:var(--brand-red); color:#fff; border-radius:0; }
+.creation-success { position:fixed; z-index:30; top:18px; left:50%; transform:translateX(-50%); padding:11px 16px; border-left:4px solid var(--brand-red); background:#fff; color:var(--brand-red-dark); box-shadow:0 3px 12px rgba(37,37,37,.14); font-size:12px; font-weight:700; }
+.study-picker { position:relative; }
+.study-picker .study-mini { width:100%; }
+.study-picker-menu { position:absolute; z-index:20; top:calc(100% + 6px); left:0; right:0; padding:5px; border:1px solid var(--brand-red); background:#fff; box-shadow:4px 4px 0 rgba(37,37,37,.12); }
+.study-picker-option { display:flex; align-items:center; gap:9px; width:100%; padding:9px 7px; border:0; background:#fff; color:var(--ink); text-align:left; }
+.study-picker-option:hover,.study-picker-option.selected { background:var(--brand-red-soft); }
+.study-picker-mark { display:grid; place-items:center; width:25px; height:25px; flex:none; background:var(--brand-red); color:#fff; font:600 11px 'Source Sans 3'; }
+.study-picker-option > span:last-child { display:grid; gap:2px; min-width:0; }
+.study-picker-option strong { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:10px; }
+.study-picker-option small { color:var(--muted); font:500 8px 'IBM Plex Mono'; }
