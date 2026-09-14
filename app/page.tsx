@@ -121,6 +121,12 @@ export default function Home() {
     };
   }, [activeSection]);
 
+  useEffect(() => {
+  if (!creationSuccess) return;
+  const timer = setTimeout(() => setCreationSuccess(""), 3000);
+  return () => clearTimeout(timer);
+}, [creationSuccess]);
+
   function updateQuestion(field: keyof Question, value: string | boolean) {
     if (field === "construct") value = activeSection === "TEST" ? "Learning Gain" : activeSection === "BACKGROUND" ? "" : String(value);
     if (field === "correct" && activeSection !== "TEST") value = "";
@@ -344,7 +350,7 @@ export default function Home() {
 
       setStudySummaries((current) => current.map((item) => item.id === study.id ? { ...item, name: study.name, description: study.description || "No game description yet", status: published ? "Published" : "Draft", updated: "Just now", questions: Object.values(questions).flat().length } : item));
       setPublishError("");
-      setCreationSuccess(`${study.name} was created successfully.`);
+      setCreationSuccess(`${study.name} was saved successfully.`);
       setView("builder");
     } catch (error) {
       setPublished(false);
@@ -441,7 +447,7 @@ export default function Home() {
 
       <section className="workspace">
         {creationSuccess && <div className="creation-success" role="status">{creationSuccess}</div>}
-        <header className="topbar"><div><span className="breadcrumb">{view === "library" || view === "player" ? "Workspace /" : `Questionnaires / ${study.name || "Untitled questionnaire"} /`}</span> <strong>{view === "library" ? "All questionnaires" : view === "player" ? "Participant questionnaires" : view === "dashboard" ? "Dashboard" : view === "builder" ? "Editor" : view === "settings" ? "Questionnaire settings" : view === "player-preview" ? "Participant session" : "Participant preview"}</strong></div><div className="top-actions"><span className={`save-state ${published ? "published" : ""}`}><span className="status-dot" />{published ? "Published" : "All changes saved"}</span>{view === "builder" && <button className="preview-button" onClick={() => setView("preview")}>Preview questionnaire<span>{"->"}</span></button>}{view === "preview" && <button className="preview-button" onClick={() => setView("builder")}>Back to editor<span>{"->"}</span></button>}{view === "settings" && <button className="preview-button" onClick={() => setView("builder")}>Back to editor<span>{"->"}</span></button>}{view === "dashboard" && <button className="preview-button" onClick={() => setView("library")}>Back to questionnaires<span>{"->"}</span></button>}{view !== "library" && view !== "player" && view !== "player-preview" && view !== "dashboard" && <button className="publish-button" onClick={publishStudy}>Create questionnaire<span>^</span></button>}</div></header>
+        <header className="topbar"><div><span className="breadcrumb">{view === "library" || view === "player" ? "Workspace /" : `Questionnaires / ${study.name || "Untitled questionnaire"} /`}</span> <strong>{view === "library" ? "All questionnaires" : view === "player" ? "Participant questionnaires" : view === "dashboard" ? "Dashboard" : view === "builder" ? "Editor" : view === "settings" ? "Questionnaire settings" : view === "player-preview" ? "Participant session" : "Participant preview"}</strong></div><div className="top-actions"><span className={`save-state ${published ? "published" : ""}`}><span className="status-dot" />{published ? "Published" : "All changes saved"}</span>{view === "builder" && <button className="preview-button" onClick={() => setView("preview")}>Preview questionnaire<span>{"->"}</span></button>}{view === "preview" && <button className="preview-button" onClick={() => setView("builder")}>Back to editor<span>{"->"}</span></button>}{view === "settings" && <button className="preview-button" onClick={() => setView("builder")}>Back to editor<span>{"->"}</span></button>}{view === "dashboard" && <button className="preview-button" onClick={() => setView("library")}>Back to questionnaires<span>{"->"}</span></button>}{view !== "library" && view !== "player" && view !== "player-preview" && view !== "dashboard" && <button className="publish-button" onClick={publishStudy}>Save questionnaire<span>^</span></button>}</div></header>
 
         {view === "library" ? <QuestionnaireLibrary questionnaires={studySummaries} onOpen={openQuestionnaire} onCreate={createQuestionnaire} onExport={exportQuestionnaire} onImport={() => importInputRef.current?.click()} onDashboard={openDashboard} error={publishError} /> : view === "dashboard" ? <Dashboard study={questionnaireStore[dashboardStudyId]?.study ?? (dashboardStudyId === initialStudy.id ? initialStudy : study)} responses={dashboardResponses} error={dashboardError} onRefresh={() => openDashboard(dashboardStudyId)} onImport={() => responseImportInputRef.current?.click()} /> : view === "player" ? <PlayerLibrary questionnaires={studySummaries} onStart={startPlayer} /> : view === "player-preview" && playerStudy && playerQuestions ? <ParticipantPreview questions={playerQuestions} study={playerStudy} onBack={() => setView("player")} onComplete={saveParticipantResponse} /> : view === "preview" ? <ParticipantPreview questions={questions} study={study} onBack={() => setView("builder")} /> : view === "settings" ? <StudySettings study={study} published={published} updateStudy={updateStudy} onTogglePublished={() => setPublished((current) => !current)} error={publishError} /> : <>
           <div className="page-heading"><div><div className="overline">QUESTIONNAIRE BUILDER</div><h1>Build your study</h1><p>Structure the moments that turn gameplay into evidence.</p></div><div className="heading-meta"><span className="meta-icon">{study.name.slice(0, 1).toUpperCase() || "S"}</span><div><strong>{study.name || "Untitled study"}</strong><span>{study.gameName || "Serious game evaluation"}</span></div><button className="edit-title" onClick={() => setView("settings")}>Edit</button></div></div>
