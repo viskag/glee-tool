@@ -310,3 +310,15 @@ h1, h2, h3, .page-heading h1, .preview-top h1, .library-heading h1, .settings-he
 
 
 
+
+
+.metric-icon img {
+  width: 22px;
+  height: 22px;
+  object-fit: contain;
+  display: block;
+}
+
+
+
+

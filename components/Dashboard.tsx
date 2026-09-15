@@ -10,6 +10,7 @@ import {
   type ParticipantResponseExport,
   type Study,
 } from "../lib/study-model";
+import { getConstructIcon } from "../lib/construct-icons";
 
 function BackgroundLearningGainPanel({
   responses,
@@ -153,14 +154,19 @@ export default function Dashboard({
 
   const renderMetric = (construct: string) => {
     const metric = metrics.find((item) => item.construct === construct);
-    return (
-      <div
-        className={`metric-card ${metric?.average == null ? "unmeasured" : ""}`}
-        key={construct}
-      >
-        <span className="metric-icon">
-          {construct.slice(0, 2).toUpperCase()}
-        </span>
+    const iconSrc = getConstructIcon(construct);
+  return (
+    <div
+      className={`metric-card ${metric?.average == null ? "unmeasured" : ""}`}
+      key={construct}
+    >
+      <span className="metric-icon">
+        {iconSrc ? (
+          <img src={iconSrc} alt="" aria-hidden="true" />
+        ) : (
+          construct.slice(0, 2).toUpperCase()
+        )}
+      </span>
         <div className="metric-card-copy">
           <h3>{construct}</h3>
           {metric?.average == null ? (
@@ -259,7 +265,12 @@ export default function Dashboard({
               learningGain ? "" : "unmeasured"
             }`}
           >
-            <span className="metric-icon">LG</span>
+            <span className="metric-icon">
+  {(() => {
+    const src = getConstructIcon("Learning Gain");
+    return src ? <img src={src} alt="" aria-hidden="true" /> : "LG";
+  })()}
+</span>
             <div className="metric-card-copy">
               <h3>Learning Gain</h3>
               {learningGain ? (
