@@ -4,17 +4,11 @@ import { signOut, useSession } from "next-auth/react";
 import { useEffect, useRef, useState } from "react";
 import QuestionnaireLibrary from "../components/QuestionnaireLibrary";
 import PlayerLibrary from "../components/PlayerLibrary";
-import { buildParticipantResponse } from "../lib/participant";
 import {
-  constructAliases,
-  constructOptions,
-  dashboardGroups,
   initialQuestions,
   initialStudy,
   initialStudySummaries,
   normalizeQuestionnaireConstruct,
-  sectionInfo,
-  type ConstructMetric,
   type ParticipantResponseExport,
   type QuestionnaireExport,
   type QuestionnaireRecord,
@@ -23,18 +17,10 @@ import {
   type Study,
   type StudySummary,
 } from "../lib/study-model";
-import { 
-  calculateBackgroundLearningGain, 
-  calculateConstructMetrics, 
-  calculateLearningGain, 
-} from "../lib/analytics";
-import {
-  createPreviewItems,
-  shuffle,
-  type PreviewItem,
-  type SectionStep,
-} from "../lib/preview";
 import ParticipantPreview from "../components/ParticipantPreview";
+import Dashboard from "../components/Dashboard";
+import StudySettings from "../components/StudySettings";
+import Builder from "../components/Builder";
 
 export default function Home() {
   const { data: session } = useSession();
@@ -61,7 +47,6 @@ export default function Home() {
 
   const activeQuestions = questions[activeSection];
   const selected = activeQuestions.find((question) => question.id === selectedId) ?? activeQuestions[0];
-  const totalQuestions = Object.values(questions).flat().length;
 
   useEffect(() => {
     setQuestionnaireStore((current) => ({ ...current, [study.id]: { study, questions, published } }));
@@ -475,155 +460,28 @@ export default function Home() {
         {creationSuccess && <div className="creation-success" role="status">{creationSuccess}</div>}
         <header className="topbar"><div><span className="breadcrumb">{view === "library" || view === "player" ? "Workspace /" : `Questionnaires / ${study.name || "Untitled questionnaire"} /`}</span> <strong>{view === "library" ? "All questionnaires" : view === "player" ? "Participant questionnaires" : view === "dashboard" ? "Dashboard" : view === "builder" ? "Editor" : view === "settings" ? "Questionnaire settings" : view === "player-preview" ? "Participant session" : "Participant preview"}</strong></div><div className="top-actions"><span className={`save-state ${published ? "published" : ""}`}><span className="status-dot" />{published ? "Published" : "All changes saved"}</span>{view === "builder" && <button className="preview-button" onClick={() => setView("preview")}>Preview questionnaire<span>{"->"}</span></button>}{view === "preview" && <button className="preview-button" onClick={() => setView("builder")}>Back to editor<span>{"->"}</span></button>}{view === "settings" && <button className="preview-button" onClick={() => setView("builder")}>Back to editor<span>{"->"}</span></button>}{view === "dashboard" && <button className="preview-button" onClick={() => setView("library")}>Back to questionnaires<span>{"->"}</span></button>}{view !== "library" && view !== "player" && view !== "player-preview" && view !== "dashboard" && <button className="publish-button" onClick={publishStudy}>Save questionnaire<span>^</span></button>}</div></header>
 
-        {view === "library" ? <QuestionnaireLibrary questionnaires={studySummaries} onOpen={openQuestionnaire} onCreate={createQuestionnaire} onExport={exportQuestionnaire} onImport={() => importInputRef.current?.click()} onDashboard={openDashboard} error={publishError} /> : view === "dashboard" ? <Dashboard study={questionnaireStore[dashboardStudyId]?.study ?? (dashboardStudyId === initialStudy.id ? initialStudy : study)} responses={dashboardResponses} error={dashboardError} onRefresh={() => openDashboard(dashboardStudyId)} onImport={() => responseImportInputRef.current?.click()} /> : view === "player" ? <PlayerLibrary questionnaires={studySummaries} onStart={startPlayer} /> : view === "player-preview" && playerStudy && playerQuestions ? <ParticipantPreview questions={playerQuestions} study={playerStudy} onBack={() => setView("player")} onComplete={saveParticipantResponse} /> : view === "preview" ? <ParticipantPreview questions={questions} study={study} onBack={() => setView("builder")} /> : view === "settings" ? <StudySettings study={study} published={published} updateStudy={updateStudy} onTogglePublished={() => setPublished((current) => !current)} error={publishError} /> : <>
-          <div className="page-heading"><div><div className="overline">QUESTIONNAIRE BUILDER</div><h1>Build your study</h1><p>Structure the moments that turn gameplay into evidence.</p></div><div className="heading-meta"><span className="meta-icon">{study.name.slice(0, 1).toUpperCase() || "S"}</span><div><strong>{study.name || "Untitled study"}</strong><span>{study.gameName || "Serious game evaluation"}</span></div><button className="edit-title" onClick={() => setView("settings")}>Edit</button></div></div>
-          <div className="builder-layout">
-            <div className="section-column"><div className="column-heading"><div><span className="overline">STUDY FLOW</span><h2>Sections</h2></div><button className="icon-button" aria-label="Add section">+</button></div><div className="section-list">{(Object.keys(sectionInfo) as SectionKey[]).map((section) => <button key={section} className={`section-card ${activeSection === section ? "selected" : ""}`} onClick={() => selectSection(section)}><span className="section-number">{sectionInfo[section].eyebrow}</span><span className="section-copy"><strong>{sectionInfo[section].label}</strong><small>{sectionInfo[section].detail}</small></span><span className="section-count">{questions[section].length}</span></button>)}</div><div className="flow-note"><span className="spark">*</span><div><strong>One test, two moments</strong><p>The knowledge test is authored once, then reused after play with randomized question and answer order.</p></div></div></div>
-            <div className="question-column"><div className="column-heading"><div><span className="overline">{sectionInfo[activeSection].eyebrow} / {activeSection}</span><h2>{sectionInfo[activeSection].label} questions</h2></div><button className="add-question" onClick={addQuestion}>+ Add question</button></div><div className="question-list">{activeQuestions.map((question) => <button key={question.id} className={`question-row ${selected?.id === question.id ? "selected" : ""}`} onClick={() => setSelectedId(question.id)}><span className="drag">::</span><span className="question-index">{String(activeQuestions.indexOf(question) + 1).padStart(2, "0")}</span><span className="question-summary"><strong>{question.text}</strong><small>{question.id} <i /> {question.type}{question.objective && <><i /> Learning measure</>}</small></span><span className="required-pill">{question.required ? "Required" : "Optional"}</span><span className="row-arrow">{"->"}</span></button>)}</div></div>
-            <div className="inspector"><div className="inspector-head"><div><span className="overline">QUESTION DETAILS</span><h2>{selected?.id ?? "New question"}</h2></div><button className="more-button">...</button></div>{selected && <><label className="field-label">Question text<textarea value={selected.text} onChange={(event) => updateQuestion("text", event.target.value)} /></label><div className="field-grid"><label className="field-label">Question ID<input value={selected.id} onChange={(event) => updateQuestion("id", event.target.value)} /></label><label className="field-label">Question type<select value={selected.type} onChange={(event) => updateQuestion("type", event.target.value)}><option>Multiple choice</option><option>Likert scale</option><option>Short answer</option></select></label></div><label className="toggle-field"><span><strong>Required question</strong><small>Participants must answer this to continue</small></span><button className={`toggle ${selected.required ? "on" : ""}`} onClick={() => updateQuestion("required", !selected.required)} aria-label="Toggle required"><span /></button></label>{selected.type !== "Short answer" && <div className="metadata-block options-block"><div className="metadata-title"><span>Answer options</span><small>{selected.options.length} choices</small></div>{selected.options.map((option, optionIndex) => <div className={`option-editor ${selected.correct === option ? "correct-option" : ""}`} key={`${selected.id}-option-${optionIndex}`}><button type="button" className={`correct-toggle ${selected.correct === option ? "on" : ""}`} onClick={() => setCorrectOption(option)} aria-label={`${selected.correct === option ? "Unset" : "Set"} correct answer for option ${optionIndex + 1}`}>{selected.correct === option ? "OK" : ""}</button><span>{String.fromCharCode(65 + optionIndex)}</span><input value={option} onChange={(event) => updateOption(optionIndex, event.target.value)} aria-label={`Option ${optionIndex + 1}`} /><button type="button" onClick={() => removeOption(optionIndex)} aria-label={`Remove option ${optionIndex + 1}`}>x</button></div>)}<button type="button" className="add-option" onClick={addOption}>+ Add answer option</button></div>}<div className="metadata-block"><div className="metadata-title"><span>Learning metadata</span><small>Used for future learning-gain analysis</small></div><label className="field-label">Learning objective<input value={selected.objective} onChange={(event) => updateQuestion("objective", event.target.value)} placeholder="e.g. Identify phishing attempts" /></label><div className="field-grid"><label className="field-label">Bloom level<select value={selected.bloom} onChange={(event) => updateQuestion("bloom", event.target.value)}><option value="">Not specified</option><option>Remembering</option><option>Understanding</option><option>Applying</option><option>Analysing</option><option>Evaluating</option><option>Creating</option></select></label><label className="field-label">Correct answer<select value={selected.correct} onChange={(event) => updateQuestion("correct", event.target.value)}><option value="">No correct answer</option>{selected.options.map((option) => <option key={`correct-${option}`} value={option}>{option}</option>)}</select></label></div><label className="field-label"> Label/Keyword/Category <input value={selected.label ?? ""} onChange={(event) => updateQuestion("label", event.target.value)} placeholder="e.g. Age, Gametime, .." /></label></div><div className="metadata-block glee-block"><div className="metadata-title"><span>GLEE construct</span><small>Optional experience measure</small></div><label className="field-label"><select value={selected.construct} onChange={(event) => updateQuestion("construct", event.target.value)}>{constructOptions.map((option) => <option key={option} value={option}>{option || "No construct linked"}</option>)}</select></label></div></>}</div>
-          </div>
-        </>}
+        {view === "library" ? <QuestionnaireLibrary questionnaires={studySummaries} onOpen={openQuestionnaire} onCreate={createQuestionnaire} onExport={exportQuestionnaire} onImport={() => importInputRef.current?.click()} onDashboard={openDashboard} error={publishError} /> : view === "dashboard" ? <Dashboard study={questionnaireStore[dashboardStudyId]?.study ?? (dashboardStudyId === initialStudy.id ? initialStudy : study)} responses={dashboardResponses} error={dashboardError} onRefresh={() => openDashboard(dashboardStudyId)} onImport={() => responseImportInputRef.current?.click()} /> : view === "player" ? <PlayerLibrary questionnaires={studySummaries} onStart={startPlayer} /> : view === "player-preview" && playerStudy && playerQuestions ? <ParticipantPreview questions={playerQuestions} study={playerStudy} onBack={() => setView("player")} onComplete={saveParticipantResponse} /> : view === "preview" ? <ParticipantPreview questions={questions} study={study} onBack={() => setView("builder")} /> : view === "settings" ? <StudySettings study={study} published={published} updateStudy={updateStudy} onTogglePublished={() => setPublished((current) => !current)} error={publishError} /> : (
+  <Builder
+    study={study}
+    questions={questions}
+    activeSection={activeSection}
+    selectedId={selectedId}
+    selected={selected}
+    activeQuestions={activeQuestions}
+    onSectionChange={selectSection}
+    onQuestionSelect={setSelectedId}
+    onUpdateQuestion={updateQuestion}
+    onUpdateOption={updateOption}
+    onSetCorrectOption={setCorrectOption}
+    onAddOption={addOption}
+    onRemoveOption={removeOption}
+    onAddQuestion={addQuestion}
+    onEditStudy={() => setView("settings")}
+  />
+)}
       </section>
       <input ref={importInputRef} className="file-input" type="file" accept="application/json,.json" onChange={importQuestionnaire} />
       <input ref={responseImportInputRef} className="file-input" type="file" multiple accept="application/json,.json" onChange={importResponses} />
     </main>
   );
-}
-
-function BackgroundLearningGainPanel({
-  responses,
-  study,
-}: {
-  responses: ParticipantResponseExport[];
-  study: Study;
-}) {
-  const questionGroups = calculateBackgroundLearningGain(responses);
-
-  return (
-    <section className="background-gain-panel">
-      <div className="background-gain-heading">
-        <div>
-          <span className="overline">
-            OBJECTIVE OUTCOMES / LEARNING GAIN
-          </span>
-          <h2>Learning gain by participant group</h2>
-          <p>
-            Groups are created from Background answers. Scores use the number
-            of scored Knowledge Test questions.
-          </p>
-        </div>
-        <span className="gain-legend">
-          <i className="pre-dot" /> Pre-test
-          <i className="post-dot" /> Post-test
-        </span>
-      </div>
-
-      {questionGroups.length ? (
-        <div className="gain-question-groups">
-          {questionGroups.map((group) => {
-            const totalParticipants = group.answers.reduce(
-              (sum, a) => sum + a.participants,
-              0
-            );
-            const denominator = Math.max(1, group.scoredQuestionCount);
-
-            return (
-              <div className="gain-question-group" key={group.questionId}>
-                <div className="gain-question-heading">
-                  <div>
-                    <span className="overline">
-                      BACKGROUND / {group.questionId}
-                    </span>
-                    <h3>{group.questionText}</h3>
-                  </div>
-                  <span className="gain-question-meta">
-                    {totalParticipants} participant
-                    {totalParticipants === 1 ? "" : "s"} · based on{" "}
-                    {group.scoredQuestionCount} scored test question
-                    {group.scoredQuestionCount === 1 ? "" : "s"}
-                  </span>
-                </div>
-
-                <div className="gain-group-grid">
-                  {group.answers.map((a) => (
-                    <article
-                      className="gain-group-card"
-                      key={`${group.questionId}-${a.answer}`}
-                    >
-                      <div className="gain-group-title">
-                        <span>{a.answer}</span>
-                        <small>
-                          {a.participants} participant
-                          {a.participants === 1 ? "" : "s"}
-                        </small>
-                      </div>
-                      <div className="gain-bars">
-                        <div className="gain-bar-row">
-                          <span>PRE</span>
-                          <div>
-                            <i
-                              style={{
-                                width: `${Math.min(
-                                  100,
-                                  (a.pre / denominator) * 100
-                                )}%`,
-                              }}
-                            />
-                          </div>
-                          <strong>{a.pre.toFixed(2)}</strong>
-                        </div>
-                        <div className="gain-bar-row">
-                          <span>POST</span>
-                          <div>
-                            <i
-                              className="post-bar"
-                              style={{
-                                width: `${Math.min(
-                                  100,
-                                  (a.post / denominator) * 100
-                                )}%`,
-                              }}
-                            />
-                          </div>
-                          <strong>{a.post.toFixed(2)}</strong>
-                        </div>
-                      </div>
-                      <div className="gain-group-footer">
-                        <strong>
-                          {a.gain >= 0 ? "+" : ""}
-                          {a.gain.toFixed(2)} points
-                        </strong>
-                        <span>
-                          SD {a.preSd.toFixed(2)} / {a.postSd.toFixed(2)}
-                        </span>
-                      </div>
-                    </article>
-                  ))}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      ) : (
-        <div className="background-gain-empty">
-          Load participant response JSONs to compare learning gain across
-          Background groups.
-        </div>
-      )}
-    </section>
-  );
-}
-
-function Dashboard({ study, responses, error, onRefresh, onImport }: { study: Study; responses: ParticipantResponseExport[]; error: string; onRefresh: () => void; onImport: () => void }) {
-  const metrics = calculateConstructMetrics(responses);
-  const learningGain = calculateLearningGain(responses);
-  const renderMetric = (construct: string) => {
-    const metric = metrics.find((item) => item.construct === construct);
-    return <div className={`metric-card ${metric?.average == null ? "unmeasured" : ""}`} key={construct}><span className="metric-icon">{construct.slice(0, 2).toUpperCase()}</span><div className="metric-card-copy"><h3>{construct}</h3>{metric?.average == null ? <span className="unmeasured-label">Not measured</span> : <><strong className="metric-value">{metric.average.toFixed(2)}<small>/ 7</small></strong><div className="metric-bar"><span style={{ width: `${(metric.average / 7) * 100}%` }} /></div></>}</div></div>;
-  };
-  return <div className="dashboard-wrap"><div className="dashboard-heading"><div><span className="overline">QUESTIONNAIRE DASHBOARD</span><h1>{study.name}</h1><p>GLEE construct averages across database responses.</p></div><div className="library-actions"><button className="create-study-button" onClick={onRefresh}>Refresh database</button><button className="secondary-action" onClick={onImport}>Load response JSONs</button></div></div>{error && <div className="settings-alert">{error}</div>}<div className="dashboard-summary"><div><span className="dashboard-summary-label">Responses loaded</span><strong>{responses.length}</strong></div><div><span className="dashboard-summary-label">Scale</span><strong>1-7</strong></div><div><span className="dashboard-summary-label">Constructs measured</span><strong>{metrics.filter((metric) => metric.average !== null).length} / {metrics.length}</strong></div></div><div className="dashboard-board"><div className="dashboard-band game-band">GAME USER EXPERIENCE</div><div className="dashboard-band learning-band">LEARNING PROCESSES &amp; OUTCOMES</div><section className="dashboard-column design-column"><header><span>01</span><strong>DESIGN QUALITIES</strong></header>{dashboardGroups.design.map(renderMetric)}</section><section className="dashboard-column experiential-column"><header><span>02</span><strong>EXPERIENTIAL RESPONSES</strong></header>{dashboardGroups.experiential.map(renderMetric)}</section><section className="dashboard-column subjective-column"><header><span>03</span><strong>SUBJECTIVE PERCEPTIONS</strong></header>{dashboardGroups.subjective.map(renderMetric)}</section><section className="dashboard-column objective-column"><header><span>04</span><strong>OBJECTIVE OUTCOMES</strong></header><div className={`metric-card learning-gain-card ${learningGain ? "" : "unmeasured"}`}><span className="metric-icon">LG</span><div className="metric-card-copy"><h3>Learning Gain</h3>{learningGain ? <><strong className="metric-value">{learningGain.pre.toFixed(2)} <small>-&gt; {learningGain.post.toFixed(2)} / {learningGain.total}</small></strong><div className="metric-bar"><span style={{ width: `${Math.max(0, Math.min(100, (learningGain.post / learningGain.total) * 100))}%` }} /></div><span className="metric-meta">Gain {learningGain.gain >= 0 ? "+" : ""}{learningGain.gain.toFixed(2)} points</span></> : <span className="unmeasured-label">Not measured</span>}</div></div></section></div><BackgroundLearningGainPanel responses={responses} study={study} /></div>;
-}
-
-function StudySettings({ study, published, updateStudy, onTogglePublished, error }: { study: Study; published: boolean; updateStudy: (field: keyof Study, value: string | boolean) => void; onTogglePublished: () => void; error: string }) {
-  return <div className="settings-wrap"><div className="settings-heading"><div><span className="overline">STUDY SETTINGS</span><h1>Shape the study</h1><p>Give participants the context they need, and keep the evaluation flow consistent.</p></div><span className="settings-badge">GLEE / MVP</span></div>{error && <div className="settings-alert">{error}</div>}<div className="settings-grid"><div className="settings-main"><section className="settings-card"><div className="settings-card-heading"><div><span className="settings-number">01</span><h2>Study overview</h2></div><span>Visible to participants</span></div><label className="field-label">Study name<input value={study.name} onChange={(event) => updateStudy("name", event.target.value)} placeholder="e.g. Phishing Quest" /></label><label className="field-label">Description<textarea value={study.description} onChange={(event) => updateStudy("description", event.target.value)} /></label><div className="field-grid"><label className="field-label">Game name<input value={study.gameName} onChange={(event) => updateStudy("gameName", event.target.value)} /></label><label className="field-label">Estimated duration<input value={study.duration} onChange={(event) => updateStudy("duration", event.target.value)} placeholder="e.g. 20 minutes" /></label></div></section><section className="settings-card"><div className="settings-card-heading"><div><span className="settings-number">02</span><h2>Participant welcome</h2></div><span>Shown before Background</span></div><label className="field-label">Introduction text<textarea value={study.welcomeText} onChange={(event) => updateStudy("welcomeText", event.target.value)} /></label><label className="field-label">Game instructions<textarea value={study.gameInstructions} onChange={(event) => updateStudy("gameInstructions", event.target.value)} /></label></section></div><div className="settings-side"><section className="settings-card"><div className="settings-card-heading"><div><span className="settings-number">03</span><h2>Participant access</h2></div></div><label className="setting-toggle"><span><strong>Published / active</strong><small>Allow this study to be available in the participant flow</small></span><button className={`toggle ${published ? "on" : ""}`} onClick={onTogglePublished} aria-label="Toggle published status"><span /></button></label><label className="setting-toggle"><span><strong>Anonymous participation</strong><small>Do not require names or email addresses</small></span><button className={`toggle ${study.anonymous ? "on" : ""}`} onClick={() => updateStudy("anonymous", !study.anonymous)} aria-label="Toggle anonymous participation"><span /></button></label><label className="setting-toggle"><span><strong>Require consent</strong><small>Ask for agreement before starting</small></span><button className={`toggle ${study.consentRequired ? "on" : ""}`} onClick={() => updateStudy("consentRequired", !study.consentRequired)} aria-label="Toggle consent requirement"><span /></button></label></section><section className="settings-card"><div className="settings-card-heading"><div><span className="settings-number">04</span><h2>Study flow</h2></div></div><div className="flow-setting"><span className="flow-icon">01</span><div><strong>Background</strong><small>Before the knowledge test</small></div><span className="flow-fixed">ON</span></div><div className="flow-setting"><span className="flow-icon">02</span><div><strong>Knowledge test</strong><small>Before and after game play</small></div><span className="flow-fixed">2x</span></div><div className="flow-setting"><span className="flow-icon">03</span><div><strong>Game UX</strong><small>After the game session</small></div><span className="flow-fixed">ON</span></div><div className="display-mode-setting"><span><strong>Participant display</strong><small>Choose whether answers stay focused or appear by section</small></span><select value={study.displayMode} onChange={(event) => updateStudy("displayMode", event.target.value as Study["displayMode"])}><option value="one-at-a-time">One question at a time</option><option value="section">Entire section</option></select></div><label className="setting-toggle flow-toggle"><span><strong>Randomize post-test</strong><small>Shuffle questions and answer options</small></span><button className={`toggle ${study.postTestRandomized ? "on" : ""}`} onClick={() => updateStudy("postTestRandomized", !study.postTestRandomized)} aria-label="Toggle post-test randomization"><span /></button></label></section></div></div></div>;
 }
