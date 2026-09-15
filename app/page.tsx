@@ -23,6 +23,11 @@ import {
   type Study,
   type StudySummary,
 } from "../lib/study-model";
+import { 
+  calculateBackgroundLearningGain, 
+  calculateConstructMetrics, 
+  calculateLearningGain, 
+} from "../lib/analytics";
 
 export default function Home() {
   const { data: session } = useSession();
@@ -185,7 +190,7 @@ export default function Home() {
   function addQuestion() {
     const prefix = activeSection === "BACKGROUND" ? "BG" : activeSection === "TEST" ? "TEST_Q" : "UX_Q";
     const nextNumber = activeQuestions.length + 1;
-    const newQuestion: Question = { id: `${prefix}_${String(nextNumber).padStart(2, "0")}`, text: "Untitled question", type: "Multiple choice", required: false, objective: "", bloom: "", correct: "", pair: "", construct: activeSection === "TEST" ? "Learning Gain" : "", options: ["Option 1", "Option 2"] };
+    const newQuestion: Question = { id: `${prefix}_${String(nextNumber).padStart(2, "0")}`, text: "Untitled question", type: "Multiple choice", required: false, objective: "", bloom: "", correct: "", label: "", construct: activeSection === "TEST" ? "Learning Gain" : "", options: ["Option 1", "Option 2"] };
     setQuestions((current) => ({ ...current, [activeSection]: [...current[activeSection], newQuestion] }));
     setSelectedId(newQuestion.id);
   }
@@ -204,13 +209,13 @@ export default function Home() {
     const newStudy: Study = { ...initialStudy, id: `questionnaire-${Date.now()}`, name: "Untitled questionnaire", description: "", gameName: "", gameInstructions: "", duration: "", welcomeText: "" };
     const defaultQuestions: Record<SectionKey, Question[]> = {
       BACKGROUND: [
-        { id: `BG_${Date.now()}_01`, text: "How often do you play digital games?", type: "Multiple choice", required: true, objective: "", bloom: "", correct: "", pair: "", construct: "", options: ["Daily", "A few times a week", "A few times a month", "Rarely"] },
+        { id: `BG_${Date.now()}_01`, text: "How often do you play digital games?", type: "Multiple choice", required: true, objective: "", bloom: "", correct: "", label: "", construct: "", options: ["Daily", "A few times a week", "A few times a month", "Rarely"] },
       ],
       TEST: [
-        { id: `TEST_${Date.now()}_01`, text: "Which action should you take when you encounter a suspicious email?", type: "Multiple choice", required: true, objective: "Identify phishing attempts", bloom: "Applying", correct: "Report it and avoid opening links", pair: "", construct: "Learning Gain", options: ["Reply to ask who sent it", "Report it and avoid opening links", "Forward it to a friend", "Download the attachment"] },
+        { id: `TEST_${Date.now()}_01`, text: "Which action should you take when you encounter a suspicious email?", type: "Multiple choice", required: true, objective: "Identify phishing attempts", bloom: "Applying", correct: "Report it and avoid opening links", label: "", construct: "Learning Gain", options: ["Reply to ask who sent it", "Report it and avoid opening links", "Forward it to a friend", "Download the attachment"] },
       ],
       GAME_UX: [
-        { id: `UX_${Date.now()}_01`, text: "I was fully absorbed in the game.", type: "Likert scale", required: true, objective: "", bloom: "", correct: "", pair: "", construct: "Immersion", options: ["1 - Completely disagree", "2 - Disagree", "3 - Slightly disagree", "4 - Neutral / neither agree nor disagree", "5 - Slightly agree", "6 - Agree", "7 - Completely agree"] },
+        { id: `UX_${Date.now()}_01`, text: "I was fully absorbed in the game.", type: "Likert scale", required: true, objective: "", bloom: "", correct: "", label: "", construct: "Immersion", options: ["1 - Completely disagree", "2 - Disagree", "3 - Slightly disagree", "4 - Neutral / neither agree nor disagree", "5 - Slightly agree", "6 - Agree", "7 - Completely agree"] },
       ],
     };
 
@@ -468,7 +473,7 @@ export default function Home() {
           <div className="builder-layout">
             <div className="section-column"><div className="column-heading"><div><span className="overline">STUDY FLOW</span><h2>Sections</h2></div><button className="icon-button" aria-label="Add section">+</button></div><div className="section-list">{(Object.keys(sectionInfo) as SectionKey[]).map((section) => <button key={section} className={`section-card ${activeSection === section ? "selected" : ""}`} onClick={() => selectSection(section)}><span className="section-number">{sectionInfo[section].eyebrow}</span><span className="section-copy"><strong>{sectionInfo[section].label}</strong><small>{sectionInfo[section].detail}</small></span><span className="section-count">{questions[section].length}</span></button>)}</div><div className="flow-note"><span className="spark">*</span><div><strong>One test, two moments</strong><p>The knowledge test is authored once, then reused after play with randomized question and answer order.</p></div></div></div>
             <div className="question-column"><div className="column-heading"><div><span className="overline">{sectionInfo[activeSection].eyebrow} / {activeSection}</span><h2>{sectionInfo[activeSection].label} questions</h2></div><button className="add-question" onClick={addQuestion}>+ Add question</button></div><div className="question-list">{activeQuestions.map((question) => <button key={question.id} className={`question-row ${selected?.id === question.id ? "selected" : ""}`} onClick={() => setSelectedId(question.id)}><span className="drag">::</span><span className="question-index">{String(activeQuestions.indexOf(question) + 1).padStart(2, "0")}</span><span className="question-summary"><strong>{question.text}</strong><small>{question.id} <i /> {question.type}{question.objective && <><i /> Learning measure</>}</small></span><span className="required-pill">{question.required ? "Required" : "Optional"}</span><span className="row-arrow">{"->"}</span></button>)}</div></div>
-            <div className="inspector"><div className="inspector-head"><div><span className="overline">QUESTION DETAILS</span><h2>{selected?.id ?? "New question"}</h2></div><button className="more-button">...</button></div>{selected && <><label className="field-label">Question text<textarea value={selected.text} onChange={(event) => updateQuestion("text", event.target.value)} /></label><div className="field-grid"><label className="field-label">Question ID<input value={selected.id} onChange={(event) => updateQuestion("id", event.target.value)} /></label><label className="field-label">Question type<select value={selected.type} onChange={(event) => updateQuestion("type", event.target.value)}><option>Multiple choice</option><option>Likert scale</option><option>Short answer</option></select></label></div><label className="toggle-field"><span><strong>Required question</strong><small>Participants must answer this to continue</small></span><button className={`toggle ${selected.required ? "on" : ""}`} onClick={() => updateQuestion("required", !selected.required)} aria-label="Toggle required"><span /></button></label>{selected.type !== "Short answer" && <div className="metadata-block options-block"><div className="metadata-title"><span>Answer options</span><small>{selected.options.length} choices</small></div>{selected.options.map((option, optionIndex) => <div className={`option-editor ${selected.correct === option ? "correct-option" : ""}`} key={`${selected.id}-option-${optionIndex}`}><button type="button" className={`correct-toggle ${selected.correct === option ? "on" : ""}`} onClick={() => setCorrectOption(option)} aria-label={`${selected.correct === option ? "Unset" : "Set"} correct answer for option ${optionIndex + 1}`}>{selected.correct === option ? "OK" : ""}</button><span>{String.fromCharCode(65 + optionIndex)}</span><input value={option} onChange={(event) => updateOption(optionIndex, event.target.value)} aria-label={`Option ${optionIndex + 1}`} /><button type="button" onClick={() => removeOption(optionIndex)} aria-label={`Remove option ${optionIndex + 1}`}>x</button></div>)}<button type="button" className="add-option" onClick={addOption}>+ Add answer option</button></div>}<div className="metadata-block"><div className="metadata-title"><span>Learning metadata</span><small>Used for future learning-gain analysis</small></div><label className="field-label">Learning objective<input value={selected.objective} onChange={(event) => updateQuestion("objective", event.target.value)} placeholder="e.g. Identify phishing attempts" /></label><div className="field-grid"><label className="field-label">Bloom level<select value={selected.bloom} onChange={(event) => updateQuestion("bloom", event.target.value)}><option value="">Not specified</option><option>Remembering</option><option>Understanding</option><option>Applying</option><option>Analysing</option><option>Evaluating</option><option>Creating</option></select></label><label className="field-label">Correct answer<select value={selected.correct} onChange={(event) => updateQuestion("correct", event.target.value)}><option value="">No correct answer</option>{selected.options.map((option) => <option key={`correct-${option}`} value={option}>{option}</option>)}</select></label></div><label className="field-label">Pre / post pair<input value={selected.pair} onChange={(event) => updateQuestion("pair", event.target.value)} placeholder="e.g. POST_Q_01" /></label></div><div className="metadata-block glee-block"><div className="metadata-title"><span>GLEE construct</span><small>Optional experience measure</small></div><label className="field-label"><select value={selected.construct} onChange={(event) => updateQuestion("construct", event.target.value)}>{constructOptions.map((option) => <option key={option} value={option}>{option || "No construct linked"}</option>)}</select></label></div></>}</div>
+            <div className="inspector"><div className="inspector-head"><div><span className="overline">QUESTION DETAILS</span><h2>{selected?.id ?? "New question"}</h2></div><button className="more-button">...</button></div>{selected && <><label className="field-label">Question text<textarea value={selected.text} onChange={(event) => updateQuestion("text", event.target.value)} /></label><div className="field-grid"><label className="field-label">Question ID<input value={selected.id} onChange={(event) => updateQuestion("id", event.target.value)} /></label><label className="field-label">Question type<select value={selected.type} onChange={(event) => updateQuestion("type", event.target.value)}><option>Multiple choice</option><option>Likert scale</option><option>Short answer</option></select></label></div><label className="toggle-field"><span><strong>Required question</strong><small>Participants must answer this to continue</small></span><button className={`toggle ${selected.required ? "on" : ""}`} onClick={() => updateQuestion("required", !selected.required)} aria-label="Toggle required"><span /></button></label>{selected.type !== "Short answer" && <div className="metadata-block options-block"><div className="metadata-title"><span>Answer options</span><small>{selected.options.length} choices</small></div>{selected.options.map((option, optionIndex) => <div className={`option-editor ${selected.correct === option ? "correct-option" : ""}`} key={`${selected.id}-option-${optionIndex}`}><button type="button" className={`correct-toggle ${selected.correct === option ? "on" : ""}`} onClick={() => setCorrectOption(option)} aria-label={`${selected.correct === option ? "Unset" : "Set"} correct answer for option ${optionIndex + 1}`}>{selected.correct === option ? "OK" : ""}</button><span>{String.fromCharCode(65 + optionIndex)}</span><input value={option} onChange={(event) => updateOption(optionIndex, event.target.value)} aria-label={`Option ${optionIndex + 1}`} /><button type="button" onClick={() => removeOption(optionIndex)} aria-label={`Remove option ${optionIndex + 1}`}>x</button></div>)}<button type="button" className="add-option" onClick={addOption}>+ Add answer option</button></div>}<div className="metadata-block"><div className="metadata-title"><span>Learning metadata</span><small>Used for future learning-gain analysis</small></div><label className="field-label">Learning objective<input value={selected.objective} onChange={(event) => updateQuestion("objective", event.target.value)} placeholder="e.g. Identify phishing attempts" /></label><div className="field-grid"><label className="field-label">Bloom level<select value={selected.bloom} onChange={(event) => updateQuestion("bloom", event.target.value)}><option value="">Not specified</option><option>Remembering</option><option>Understanding</option><option>Applying</option><option>Analysing</option><option>Evaluating</option><option>Creating</option></select></label><label className="field-label">Correct answer<select value={selected.correct} onChange={(event) => updateQuestion("correct", event.target.value)}><option value="">No correct answer</option>{selected.options.map((option) => <option key={`correct-${option}`} value={option}>{option}</option>)}</select></label></div><label className="field-label"> Label/Keyword/Category <input value={selected.label ?? ""} onChange={(event) => updateQuestion("label", event.target.value)} placeholder="e.g. Age, Gametime, .." /></label></div><div className="metadata-block glee-block"><div className="metadata-title"><span>GLEE construct</span><small>Optional experience measure</small></div><label className="field-label"><select value={selected.construct} onChange={(event) => updateQuestion("construct", event.target.value)}>{constructOptions.map((option) => <option key={option} value={option}>{option || "No construct linked"}</option>)}</select></label></div></>}</div>
           </div>
         </>}
       </section>
@@ -478,116 +483,128 @@ export default function Home() {
   );
 }
 
-function parseLikertValue(answer: string) {
-  const match = answer.trim().match(/^[1-7]/);
-  return match ? Number(match[0]) : null;
-}
+function BackgroundLearningGainPanel({
+  responses,
+  study,
+}: {
+  responses: ParticipantResponseExport[];
+  study: Study;
+}) {
+  const questionGroups = calculateBackgroundLearningGain(responses);
 
-function calculateConstructMetrics(responses: ParticipantResponseExport[]): ConstructMetric[] {
-  const buckets = new Map<string, { total: number; answers: number; participants: Set<string> }>();
-  responses.forEach((response) => {
-    Object.entries(response.questionnaire.questions).forEach(([section, questions]) => {
-      questions.forEach((question) => {
-        if (question.type !== "Likert scale" || !question.construct) return;
-        if (section === "TEST") return;
-        const normalizedConstruct = constructAliases[question.construct.trim().toLowerCase().replace(/\s+/g, " ")];
-        if (!normalizedConstruct) return;
-        const phases = section === "TEST" ? ["PRE_TEST", "POST_TEST"] : [section];
-        phases.forEach((phase) => {
-          const answer = response.answers[phase as keyof ParticipantResponseExport["answers"]][question.id];
-          const value = answer ? parseLikertValue(answer) : null;
-          if (value === null) return;
-          const bucket = buckets.get(normalizedConstruct) ?? { total: 0, answers: 0, participants: new Set<string>() };
-          bucket.total += value;
-          bucket.answers += 1;
-          bucket.participants.add(response.responseId);
-          buckets.set(normalizedConstruct, bucket);
-        });
-      });
-    });
-  });
-  const allConstructs = [...dashboardGroups.design, ...dashboardGroups.experiential, ...dashboardGroups.subjective];
-  return allConstructs.map((construct) => {
-    const bucket = buckets.get(construct);
-    return { construct, average: bucket ? bucket.total / bucket.answers : null, answers: bucket?.answers ?? 0, participants: bucket?.participants.size ?? 0 };
-  });
-}
+  return (
+    <section className="background-gain-panel">
+      <div className="background-gain-heading">
+        <div>
+          <span className="overline">
+            OBJECTIVE OUTCOMES / LEARNING GAIN
+          </span>
+          <h2>Learning gain by participant group</h2>
+          <p>
+            Groups are created from Background answers. Scores use the number
+            of scored Knowledge Test questions.
+          </p>
+        </div>
+        <span className="gain-legend">
+          <i className="pre-dot" /> Pre-test
+          <i className="post-dot" /> Post-test
+        </span>
+      </div>
 
-function calculateLearningGain(responses: ParticipantResponseExport[]) {
-  let preScoreTotal = 0;
-  let postScoreTotal = 0;
-  let scoredParticipants = 0;
-  let questionCount = 0;
-  function isCorrect(answer: string | undefined, question: Question) {
-    if (!answer || !question.correct) return false;
-    if (answer === question.correct) return true;
-    const correctIndex = /^[A-G]$/i.test(question.correct) ? question.correct.toUpperCase().charCodeAt(0) - 65 : -1;
-    return correctIndex >= 0 && question.options[correctIndex] === answer;
-  }
+      {questionGroups.length ? (
+        <div className="gain-question-groups">
+          {questionGroups.map((group) => {
+            const totalParticipants = group.answers.reduce(
+              (sum, a) => sum + a.participants,
+              0
+            );
+            const denominator = Math.max(1, group.scoredQuestionCount);
 
-  responses.forEach((response) => {
-    const testQuestions = response.questionnaire.questions.TEST;
-    const scoredQuestions = testQuestions.filter((question) => question.correct);
-    if (!scoredQuestions.length) return;
-    questionCount = Math.max(questionCount, scoredQuestions.length);
-    preScoreTotal += scoredQuestions.filter((question) => isCorrect(response.answers.PRE_TEST[question.id], question)).length;
-    postScoreTotal += scoredQuestions.filter((question) => isCorrect(response.answers.POST_TEST[question.id], question)).length;
-    scoredParticipants += 1;
-  });
-  if (!scoredParticipants || !questionCount) return null;
-  return { pre: preScoreTotal / scoredParticipants, post: postScoreTotal / scoredParticipants, gain: (postScoreTotal - preScoreTotal) / scoredParticipants, total: questionCount };
-}
+            return (
+              <div className="gain-question-group" key={group.questionId}>
+                <div className="gain-question-heading">
+                  <div>
+                    <span className="overline">
+                      BACKGROUND / {group.questionId}
+                    </span>
+                    <h3>{group.questionText}</h3>
+                  </div>
+                  <span className="gain-question-meta">
+                    {totalParticipants} participant
+                    {totalParticipants === 1 ? "" : "s"} · based on{" "}
+                    {group.scoredQuestionCount} scored test question
+                    {group.scoredQuestionCount === 1 ? "" : "s"}
+                  </span>
+                </div>
 
-type BackgroundGainGroup = {
-  question: string;
-  answer: string;
-  participants: number;
-  pre: number;
-  post: number;
-  gain: number;
-  preSd: number;
-  postSd: number;
-};
-
-function calculateBackgroundLearningGain(responses: ParticipantResponseExport[]): BackgroundGainGroup[] {
-  const groups = new Map<string, { question: string; answer: string; pre: number[]; post: number[] }>();
-  responses.forEach((response) => {
-    const testQuestions = response.questionnaire.questions.TEST.filter((question) => question.correct);
-    const scored = (phase: "PRE_TEST" | "POST_TEST") => testQuestions.filter((question) => {
-      const answer = response.answers[phase][question.id];
-      if (answer === question.correct) return true;
-      const index = /^[A-G]$/i.test(question.correct) ? question.correct.toUpperCase().charCodeAt(0) - 65 : -1;
-      return index >= 0 && question.options[index] === answer;
-    }).length;
-    if (!testQuestions.length) return;
-    const pre = scored("PRE_TEST");
-    const post = scored("POST_TEST");
-    response.questionnaire.questions.BACKGROUND.forEach((question) => {
-      const answer = response.answers.BACKGROUND[question.id];
-      if (!answer) return;
-      const key = `${question.id}:${answer}`;
-      const group = groups.get(key) ?? { question: question.text, answer, pre: [], post: [] };
-      group.pre.push(pre);
-      group.post.push(post);
-      groups.set(key, group);
-    });
-  });
-  const standardDeviation = (values: number[]) => {
-    if (values.length < 2) return 0;
-    const mean = values.reduce((sum, value) => sum + value, 0) / values.length;
-    return Math.sqrt(values.reduce((sum, value) => sum + (value - mean) ** 2, 0) / (values.length - 1));
-  };
-  return Array.from(groups.values()).map((group) => {
-    const pre = group.pre.reduce((sum, value) => sum + value, 0) / group.pre.length;
-    const post = group.post.reduce((sum, value) => sum + value, 0) / group.post.length;
-    return { question: group.question, answer: group.answer, participants: group.pre.length, pre, post, gain: post - pre, preSd: standardDeviation(group.pre), postSd: standardDeviation(group.post) };
-  });
-}
-
-function BackgroundLearningGainPanel({ responses, study }: { responses: ParticipantResponseExport[]; study: Study }) {
-  const groups = calculateBackgroundLearningGain(responses);
-  const denominator = Math.max(1, responses[0]?.questionnaire.questions.TEST.filter((question) => question.correct).length ?? 1);
-  return <section className="background-gain-panel"><div className="background-gain-heading"><div><span className="overline">OBJECTIVE OUTCOMES / LEARNING GAIN</span><h2>Learning gain by participant group</h2><p>Groups are created from Background answers. Scores use the number of scored Knowledge Test questions.</p></div><span className="gain-legend"><i className="pre-dot" /> Pre-test <i className="post-dot" /> Post-test</span></div>{groups.length ? <div className="gain-group-grid">{groups.map((group) => <article className="gain-group-card" key={`${group.question}-${group.answer}`}><div className="gain-group-title"><span>{group.answer}</span><small>{group.participants} participant{group.participants === 1 ? "" : "s"}</small></div><div className="gain-bars"><div className="gain-bar-row"><span>PRE</span><div><i style={{ width: `${Math.min(100, (group.pre / denominator) * 100)}%` }} /></div><strong>{group.pre.toFixed(2)}</strong></div><div className="gain-bar-row"><span>POST</span><div><i className="post-bar" style={{ width: `${Math.min(100, (group.post / denominator) * 100)}%` }} /></div><strong>{group.post.toFixed(2)}</strong></div></div><div className="gain-group-footer"><strong>{group.gain >= 0 ? "+" : ""}{group.gain.toFixed(2)} points</strong><span>SD {group.preSd.toFixed(2)} / {group.postSd.toFixed(2)}</span></div></article>)}</div> : <div className="background-gain-empty">Load participant response JSONs to compare learning gain across Background groups.</div>}</section>;
+                <div className="gain-group-grid">
+                  {group.answers.map((a) => (
+                    <article
+                      className="gain-group-card"
+                      key={`${group.questionId}-${a.answer}`}
+                    >
+                      <div className="gain-group-title">
+                        <span>{a.answer}</span>
+                        <small>
+                          {a.participants} participant
+                          {a.participants === 1 ? "" : "s"}
+                        </small>
+                      </div>
+                      <div className="gain-bars">
+                        <div className="gain-bar-row">
+                          <span>PRE</span>
+                          <div>
+                            <i
+                              style={{
+                                width: `${Math.min(
+                                  100,
+                                  (a.pre / denominator) * 100
+                                )}%`,
+                              }}
+                            />
+                          </div>
+                          <strong>{a.pre.toFixed(2)}</strong>
+                        </div>
+                        <div className="gain-bar-row">
+                          <span>POST</span>
+                          <div>
+                            <i
+                              className="post-bar"
+                              style={{
+                                width: `${Math.min(
+                                  100,
+                                  (a.post / denominator) * 100
+                                )}%`,
+                              }}
+                            />
+                          </div>
+                          <strong>{a.post.toFixed(2)}</strong>
+                        </div>
+                      </div>
+                      <div className="gain-group-footer">
+                        <strong>
+                          {a.gain >= 0 ? "+" : ""}
+                          {a.gain.toFixed(2)} points
+                        </strong>
+                        <span>
+                          SD {a.preSd.toFixed(2)} / {a.postSd.toFixed(2)}
+                        </span>
+                      </div>
+                    </article>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      ) : (
+        <div className="background-gain-empty">
+          Load participant response JSONs to compare learning gain across
+          Background groups.
+        </div>
+      )}
+    </section>
+  );
 }
 
 function Dashboard({ study, responses, error, onRefresh, onImport }: { study: Study; responses: ParticipantResponseExport[]; error: string; onRefresh: () => void; onImport: () => void }) {

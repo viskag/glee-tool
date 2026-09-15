@@ -56,8 +56,7 @@ export function calculateLearningGain(responses: ParticipantResponseExport[]) {
   return { pre: preScoreTotal / scoredParticipants, post: postScoreTotal / scoredParticipants, gain: (postScoreTotal - preScoreTotal) / scoredParticipants, total: questionCount };
 }
 
-export type BackgroundGainGroup = {
-  question: string;
+export type BackgroundAnswerGroup = {
   answer: string;
   participants: number;
   pre: number;
@@ -67,37 +66,90 @@ export type BackgroundGainGroup = {
   postSd: number;
 };
 
-export function calculateBackgroundLearningGain(responses: ParticipantResponseExport[]): BackgroundGainGroup[] {
-  const groups = new Map<string, { question: string; answer: string; pre: number[]; post: number[] }>();
+export type BackgroundQuestionGroup = {
+  questionId: string;
+  questionText: string;
+  scoredQuestionCount: number;
+  answers: BackgroundAnswerGroup[];
+};
+
+export function calculateBackgroundLearningGain(
+  responses: ParticipantResponseExport[]
+): BackgroundQuestionGroup[] {
+  const perQuestion = new Map<
+    string,
+    {
+      questionText: string;
+      scoredQuestionCount: number;
+      answers: Map<string, { pre: number[]; post: number[] }>;
+    }
+  >();
+
   responses.forEach((response) => {
-    const testQuestions = response.questionnaire.questions.TEST.filter((question) => question.correct);
-    const scored = (phase: "PRE_TEST" | "POST_TEST") => testQuestions.filter((question) => {
-      const answer = response.answers[phase][question.id];
-      if (answer === question.correct) return true;
-      const index = /^[A-G]$/i.test(question.correct) ? question.correct.toUpperCase().charCodeAt(0) - 65 : -1;
-      return index >= 0 && question.options[index] === answer;
-    }).length;
+    const testQuestions = response.questionnaire.questions.TEST.filter(
+      (q) => q.correct
+    );
     if (!testQuestions.length) return;
-    const pre = scored("PRE_TEST");
-    const post = scored("POST_TEST");
+
+    const scoreFor = (phase: "PRE_TEST" | "POST_TEST") =>
+      testQuestions.filter((question) => {
+        const answer = response.answers[phase][question.id];
+        if (answer === question.correct) return true;
+        const index = /^[A-G]$/i.test(question.correct)
+          ? question.correct.toUpperCase().charCodeAt(0) - 65
+          : -1;
+        return index >= 0 && question.options[index] === answer;
+      }).length;
+
+    const pre = scoreFor("PRE_TEST");
+    const post = scoreFor("POST_TEST");
+
     response.questionnaire.questions.BACKGROUND.forEach((question) => {
       const answer = response.answers.BACKGROUND[question.id];
       if (!answer) return;
-      const key = `${question.id}:${answer}`;
-      const group = groups.get(key) ?? { question: question.text, answer, pre: [], post: [] };
-      group.pre.push(pre);
-      group.post.push(post);
-      groups.set(key, group);
+
+      const qEntry =
+        perQuestion.get(question.id) ??
+        {
+          questionText: question.label?.trim() || question.text,
+          scoredQuestionCount: testQuestions.length,
+          answers: new Map(),
+        };
+
+      const aEntry = qEntry.answers.get(answer) ?? { pre: [], post: [] };
+      aEntry.pre.push(pre);
+      aEntry.post.push(post);
+      qEntry.answers.set(answer, aEntry);
+
+      perQuestion.set(question.id, qEntry);
     });
   });
+
   const standardDeviation = (values: number[]) => {
     if (values.length < 2) return 0;
     const mean = values.reduce((sum, value) => sum + value, 0) / values.length;
-    return Math.sqrt(values.reduce((sum, value) => sum + (value - mean) ** 2, 0) / (values.length - 1));
+    return Math.sqrt(
+      values.reduce((sum, value) => sum + (value - mean) ** 2, 0) /
+        (values.length - 1)
+    );
   };
-  return Array.from(groups.values()).map((group) => {
-    const pre = group.pre.reduce((sum, value) => sum + value, 0) / group.pre.length;
-    const post = group.post.reduce((sum, value) => sum + value, 0) / group.post.length;
-    return { question: group.question, answer: group.answer, participants: group.pre.length, pre, post, gain: post - pre, preSd: standardDeviation(group.pre), postSd: standardDeviation(group.post) };
-  });
+
+  return Array.from(perQuestion.entries()).map(([questionId, q]) => ({
+    questionId,
+    questionText: q.questionText,
+    scoredQuestionCount: q.scoredQuestionCount,
+    answers: Array.from(q.answers.entries()).map(([answer, { pre, post }]) => {
+      const preMean = pre.reduce((sum, v) => sum + v, 0) / pre.length;
+      const postMean = post.reduce((sum, v) => sum + v, 0) / post.length;
+      return {
+        answer,
+        participants: pre.length,
+        pre: preMean,
+        post: postMean,
+        gain: postMean - preMean,
+        preSd: standardDeviation(pre),
+        postSd: standardDeviation(post),
+      };
+    }),
+  }));
 }
