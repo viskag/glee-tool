@@ -1,5 +1,6 @@
 "use client";
 
+import { signOut, useSession } from "next-auth/react";
 import { useEffect, useRef, useState } from "react";
 import QuestionnaireLibrary from "../components/QuestionnaireLibrary";
 import PlayerLibrary from "../components/PlayerLibrary";
@@ -24,6 +25,7 @@ import {
 } from "../lib/study-model";
 
 export default function Home() {
+  const { data: session } = useSession();
   const [activeSection, setActiveSection] = useState<SectionKey>("TEST");
   const [questions, setQuestions] = useState(initialQuestions);
   const [selectedId, setSelectedId] = useState("TEST_Q_01");
@@ -195,9 +197,6 @@ export default function Home() {
 
   function updateStudy(field: keyof Study, value: string | boolean) {
     setStudy((current) => ({ ...current, [field]: value }));
-    if (field === "name") {
-      setStudySummaries((current) => current.map((item) => item.id === study.id ? { ...item, name: String(value), updated: "Just now" } : item));
-    }
     setPublishError("");
   }
 
@@ -442,7 +441,22 @@ export default function Home() {
         <div className="workspace-label">Workspace</div>
         <div className="study-picker"><button className="study-mini" onClick={() => setStudyPickerOpen((current) => !current)} aria-expanded={studyPickerOpen}><div className="study-dot">{study.name.slice(0, 1).toUpperCase() || "S"}</div><div><strong>{study.name || "Untitled questionnaire"}</strong><span>{published ? "Published" : "Draft questionnaire"}</span></div><span className="chevron">{studyPickerOpen ? "^" : "v"}</span></button>{studyPickerOpen && <div className="study-picker-menu">{studySummaries.map((questionnaire) => <button key={questionnaire.id} className={`study-picker-option ${questionnaire.id === study.id ? "selected" : ""}`} onClick={() => selectWorkingQuestionnaire(questionnaire.id)}><span className="study-picker-mark">{questionnaire.name.slice(0, 1).toUpperCase() || "S"}</span><span><strong>{questionnaire.name}</strong><small>{questionnaire.status} · {questionnaire.questions} questions</small></span></button>)}</div>}</div>
         <nav className="main-nav sub-nav"><button className={`nav-item ${view === "settings" ? "active" : "muted"}`} onClick={() => setView("settings")}><span className="nav-icon">i</span>Info</button><button className={`nav-item ${view === "builder" ? "active" : "muted"}`} onClick={() => setView("builder")}><span className="nav-icon">[]</span>Editor</button><button className={`nav-item ${view === "dashboard" ? "active" : "muted"}`} onClick={() => openDashboard(study.id)}><span className="nav-icon">%</span>Dashboard</button></nav>
-        <div className="sidebar-bottom"><div className="user-chip"><span className="avatar">AR</span><span><strong>Alex Rivera</strong><small>Researcher</small></span><span className="more">...</span></div></div>
+<div className="user-chip">
+  <span className="avatar">
+    {(session?.user?.name ?? "R").slice(0, 2).toUpperCase()}
+  </span>
+  <span>
+    <strong>{session?.user?.name ?? "Researcher"}</strong>
+    <small>{session?.user?.role ?? ""}</small>
+  </span>
+  <button
+    className="logout-button"
+    onClick={() => signOut({ callbackUrl: "/login" })}
+    title="Sign out"
+  >
+    Logout
+  </button>
+</div>
       </aside>
 
       <section className="workspace">

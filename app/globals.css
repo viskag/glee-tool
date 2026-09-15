@@ -165,3 +165,92 @@ h1, h2, h3, .page-heading h1, .preview-top h1, .library-heading h1, .settings-he
 .study-picker-option > span:last-child { display:grid; gap:2px; min-width:0; }
 .study-picker-option strong { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:10px; }
 .study-picker-option small { color:var(--muted); font:500 8px 'IBM Plex Mono'; }
+
+
+
+
+
+.login-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  background: #f2f2f0;
+  padding: 20px;
+}
+
+.login-card {
+  width: 100%;
+  max-width: 380px;
+  background: #fff;
+  padding: 32px 28px;
+  border: 1px solid var(--line);
+  border-left: 6px solid var(--brand-red);
+}
+
+.login-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 28px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  font-size: 15px;
+}
+
+.login-brand small {
+  display: block;
+  color: var(--muted);
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  font-weight: 600;
+  margin-top: 2px;
+}
+
+.login-card h1 {
+  margin: 0 0 6px;
+  font-family: "Barlow Condensed", sans-serif;
+  font-size: 28px;
+  letter-spacing: -0.02em;
+}
+
+.login-card > p {
+  margin: 0 0 24px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.login-card .field-label {
+  margin-bottom: 18px;
+}
+
+.login-card .publish-button {
+  width: 100%;
+  padding: 12px;
+  margin-top: 8px;
+}
+
+.login-error {
+  color: var(--brand-red-dark);
+  font-size: 11px;
+  margin: 4px 0 8px;
+  font-weight: 700;
+}
+
+.logout-button {
+  border: 0;
+  background: transparent;
+  color: var(--brand-red);
+  font-size: 10px;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 4px 6px;
+}
+
+.logout-button:hover {
+  background: var(--brand-red-soft);
+}
+
+
+
+

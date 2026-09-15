@@ -25,4 +25,10 @@ if (process.env.NODE_ENV === "development") {
   clientPromise = client.connect();
 }
 
+export async function getDb() {
+  const client = await clientPromise;
+  const dbName = process.env.MONGODB_DB || "glee_db";
+  return client.db(dbName);
+}
+
 export default clientPromise;
