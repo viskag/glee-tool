@@ -6,7 +6,10 @@ import {
   calculateConstructMetrics,
   calculateLearningGain,
 } from "../lib/analytics";
-import type { DashboardAdvicePayload } from "../lib/dashboard-advice";
+import type {
+  DashboardAdviceMessage,
+  DashboardAdvicePayload,
+} from "../lib/dashboard-advice";
 import {
   dashboardGroups,
   type ParticipantResponseExport,
@@ -151,14 +154,18 @@ export default function Dashboard({
   onRefresh: () => void;
   onImport: () => void;
 }) {
-  const [advice, setAdvice] = useState("");
+  const [adviceMessages, setAdviceMessages] = useState<DashboardAdviceMessage[]>([]);
+  const [adviceDraft, setAdviceDraft] = useState("");
   const [adviceError, setAdviceError] = useState("");
   const [adviceLoading, setAdviceLoading] = useState(false);
   const metrics = calculateConstructMetrics(responses);
   const learningGain = calculateLearningGain(responses);
+  const backgroundGroups = calculateBackgroundLearningGain(responses);
 
-  async function requestAdvice() {
-    setAdvice("");
+  async function sendAdviceMessage(
+    conversation: DashboardAdviceMessage[],
+    messages: DashboardAdviceMessage[]
+  ) {
     setAdviceError("");
     setAdviceLoading(true);
 
@@ -172,23 +179,30 @@ export default function Dashboard({
       constructs: metrics.map(({ construct, average, answers, participants }) => ({
         construct,
         average,
+        measurementStatus: average === null ? "Niet gemeten" : "Gemeten",
         answers,
         participants,
       })),
+      likertScale: { minimum: 1, maximum: 7 },
       learningGain,
+      backgroundGroups,
     };
 
     try {
       const response = await fetch("/api/dashboard-advice", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+        body: JSON.stringify({ dashboard: payload, messages }),
       });
       const result = await response.json().catch(() => null);
       if (!response.ok || typeof result?.advice !== "string") {
         throw new Error(result?.error || "Could not generate dashboard advice.");
       }
-      setAdvice(result.advice);
+      setAdviceMessages([
+        ...conversation,
+        { role: "assistant", content: result.advice },
+      ]);
+      setAdviceDraft("");
     } catch (error) {
       setAdviceError(
         error instanceof Error ? error.message : "Could not generate dashboard advice."
@@ -196,6 +210,25 @@ export default function Dashboard({
     } finally {
       setAdviceLoading(false);
     }
+  }
+
+  function requestAdvice() {
+    setAdviceMessages([]);
+    setAdviceDraft("");
+    void sendAdviceMessage([], []);
+  }
+
+  function sendFollowUp(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const question = adviceDraft.trim();
+    if (!question || adviceLoading) return;
+
+    const updatedConversation: DashboardAdviceMessage[] = [
+      ...adviceMessages,
+      { role: "user", content: question },
+    ];
+    const recentMessages = updatedConversation.slice(-12);
+    void sendAdviceMessage(updatedConversation, recentMessages);
   }
 
   const renderMetric = (construct: string) => {
@@ -247,7 +280,11 @@ export default function Dashboard({
             onClick={requestAdvice}
             disabled={!responses.length || adviceLoading}
           >
-            {adviceLoading ? "Analyzing..." : "Get AI advice"}
+            {adviceLoading
+              ? "Analyzing..."
+              : adviceMessages.length
+                ? "Start new analysis"
+                : "Get AI advice"}
           </button>
           <button className="create-study-button" onClick={onRefresh}>
             Refresh database
@@ -268,16 +305,49 @@ export default function Dashboard({
           </div>
           <p>
             Uses study details and aggregate metrics only. Individual participant
-            responses are not sent.
+            responses are not sent. Chat history stays in this Dashboard session.
           </p>
         </div>
+        {adviceMessages.length > 0 && (
+          <div className="dashboard-advice-chat" aria-live="polite">
+            {adviceMessages.map((message, index) => (
+              <article
+                className={`dashboard-advice-message ${message.role}`}
+                key={`${index}-${message.role}`}
+              >
+                <strong>{message.role === "user" ? "Jij" : "Lokale AI"}</strong>
+                <pre>{message.content}</pre>
+              </article>
+            ))}
+          </div>
+        )}
         {adviceLoading && (
           <p className="dashboard-advice-status" role="status">
-            Asking your local model to review the dashboard...
+            De lokale AI denkt na...
           </p>
         )}
         {adviceError && <p className="settings-alert" role="alert">{adviceError}</p>}
-        {advice && <pre className="dashboard-advice-result">{advice}</pre>}
+        {adviceMessages.length > 0 && (
+          <form className="dashboard-advice-form" onSubmit={sendFollowUp}>
+            <label htmlFor="dashboard-advice-input">Stel een vervolgvraag</label>
+            <textarea
+              id="dashboard-advice-input"
+              value={adviceDraft}
+              onChange={(event) => setAdviceDraft(event.target.value)}
+              maxLength={2000}
+              rows={3}
+              placeholder="Bijvoorbeeld: Welke beperking is hier het belangrijkst?"
+              disabled={adviceLoading}
+            />
+            <button
+              className="create-study-button"
+              type="submit"
+              disabled={adviceLoading || !adviceDraft.trim()}
+            >
+              Verstuur vraag
+            </button>
+          </form>
+        )}
         {!responses.length && (
           <p className="dashboard-advice-status">
             Load participant responses before requesting advice.
