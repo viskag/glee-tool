@@ -1,10 +1,12 @@
 "use client";
 
+import { useState } from "react";
 import {
   calculateBackgroundLearningGain,
   calculateConstructMetrics,
   calculateLearningGain,
 } from "../lib/analytics";
+import type { DashboardAdvicePayload } from "../lib/dashboard-advice";
 import {
   dashboardGroups,
   type ParticipantResponseExport,
@@ -149,8 +151,52 @@ export default function Dashboard({
   onRefresh: () => void;
   onImport: () => void;
 }) {
+  const [advice, setAdvice] = useState("");
+  const [adviceError, setAdviceError] = useState("");
+  const [adviceLoading, setAdviceLoading] = useState(false);
   const metrics = calculateConstructMetrics(responses);
   const learningGain = calculateLearningGain(responses);
+
+  async function requestAdvice() {
+    setAdvice("");
+    setAdviceError("");
+    setAdviceLoading(true);
+
+    const payload: DashboardAdvicePayload = {
+      study: {
+        name: study.name,
+        description: study.description,
+        gameName: study.gameName,
+      },
+      responseCount: responses.length,
+      constructs: metrics.map(({ construct, average, answers, participants }) => ({
+        construct,
+        average,
+        answers,
+        participants,
+      })),
+      learningGain,
+    };
+
+    try {
+      const response = await fetch("/api/dashboard-advice", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const result = await response.json().catch(() => null);
+      if (!response.ok || typeof result?.advice !== "string") {
+        throw new Error(result?.error || "Could not generate dashboard advice.");
+      }
+      setAdvice(result.advice);
+    } catch (error) {
+      setAdviceError(
+        error instanceof Error ? error.message : "Could not generate dashboard advice."
+      );
+    } finally {
+      setAdviceLoading(false);
+    }
+  }
 
   const renderMetric = (construct: string) => {
     const metric = metrics.find((item) => item.construct === construct);
@@ -196,6 +242,13 @@ export default function Dashboard({
           <p>GLEE construct averages across database responses.</p>
         </div>
         <div className="library-actions">
+          <button
+            className="create-study-button"
+            onClick={requestAdvice}
+            disabled={!responses.length || adviceLoading}
+          >
+            {adviceLoading ? "Analyzing..." : "Get AI advice"}
+          </button>
           <button className="create-study-button" onClick={onRefresh}>
             Refresh database
           </button>
@@ -206,6 +259,31 @@ export default function Dashboard({
       </div>
 
       {error && <div className="settings-alert">{error}</div>}
+
+      <section className="dashboard-advice" aria-labelledby="dashboard-advice-title">
+        <div className="dashboard-advice-heading">
+          <div>
+            <span className="overline">LOCAL AI / OLLAMA</span>
+            <h2 id="dashboard-advice-title">Research advice</h2>
+          </div>
+          <p>
+            Uses study details and aggregate metrics only. Individual participant
+            responses are not sent.
+          </p>
+        </div>
+        {adviceLoading && (
+          <p className="dashboard-advice-status" role="status">
+            Asking your local model to review the dashboard...
+          </p>
+        )}
+        {adviceError && <p className="settings-alert" role="alert">{adviceError}</p>}
+        {advice && <pre className="dashboard-advice-result">{advice}</pre>}
+        {!responses.length && (
+          <p className="dashboard-advice-status">
+            Load participant responses before requesting advice.
+          </p>
+        )}
+      </section>
 
       <div className="dashboard-summary">
         <div>

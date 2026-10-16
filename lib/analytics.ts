@@ -53,7 +53,7 @@ export function calculateLearningGain(responses: ParticipantResponseExport[]) {
     scoredParticipants += 1;
   });
   if (!scoredParticipants || !questionCount) return null;
-  return { pre: preScoreTotal / scoredParticipants, post: postScoreTotal / scoredParticipants, gain: (postScoreTotal - preScoreTotal) / scoredParticipants, total: questionCount };
+  return { pre: preScoreTotal / scoredParticipants, post: postScoreTotal / scoredParticipants, gain: (postScoreTotal - preScoreTotal) / scoredParticipants, total: questionCount, participants: scoredParticipants };
 }
 
 export type BackgroundAnswerGroup = {
