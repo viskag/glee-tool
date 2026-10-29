@@ -1,0 +1,164 @@
+{
+  "minelabsUxTemplate": {
+    "name": "Minelabs Game UX & Learning Template",
+    "description": "Bevat de PXI, Flow, Relatedness, Perceived Learning en Game Acceptance vragen (1-7 Likert schaal).",
+    "scale": [
+      "1 - Helemaal niet mee eens",
+      "2",
+      "3",
+      "4 - Neutraal",
+      "5",
+      "6",
+      "7 - Helemaal mee eens"
+    ],
+    "constructs": [
+      {
+        "construct": "Meaning",
+        "source": "PXI",
+        "questions": [
+          "De game spelen was zinvol voor mij.",
+          "De game voelde relevant voor mij.",
+          "De game spelen was waardevol voor mij."
+        ]
+      },
+      {
+        "construct": "Discovery",
+        "source": "PXI",
+        "questions": [
+          "Ik wilde ontdekken hoe de game evolueerde.",
+          "Ik wilde weten hoe de game vorderde.",
+          "Ik had zin om te ontdekken hoe de game verder ging."
+        ]
+      },
+      {
+        "construct": "Competence",
+        "source": "PXI",
+        "questions": [
+          "Ik had het gevoel dat ik goed was in het spelen van de game.",
+          "Ik voelde me bekwaam tijdens het spelen van de game.",
+          "Ik had een gevoel van controle tijdens het spelen van de game."
+        ]
+      },
+      {
+        "construct": "Autonomy",
+        "source": "PXI",
+        "questions": [
+          "Ik voelde me vrij om de game op mijn eigen manier te spelen.",
+          "Ik had het gevoel dat ik keuze had in hoe ik de game kon spelen.",
+          "Ik ervaarde een gevoel van vrijheid over de manier waarop ik de game wou spelen."
+        ]
+      },
+      {
+        "construct": "Immersion",
+        "source": "PXI",
+        "questions": [
+          "Ik was me tijdens het spelen niet meer bewust van mijn omgeving.",
+          "Ik werd ondergedompeld in de game.",
+          "Ik was volledig gefocust op de game."
+        ]
+      },
+      {
+        "construct": "Progress Feedback",
+        "source": "PXI",
+        "questions": [
+          "De game gaf mij informatie over mijn voortgang tijdens het spelen.",
+          "Ik kon gemakkelijk beoordelen hoe ik presteerde in de game.",
+          "De game gaf mij duidelijke feedback over mijn voortgang."
+        ]
+      },
+      {
+        "construct": "Audiovisual Appeal",
+        "source": "PXI",
+        "questions": [
+          "Ik heb genoten van de vormgeving van de game.",
+          "Ik hield van de audiovisuele styling van de game.",
+          "Ik vond de game stijlvol, esthetisch."
+        ]
+      },
+      {
+        "construct": "Challenge",
+        "source": "PXI",
+        "questions": [
+          "De game was niet te makkelijk maar ook niet te moeilijk om te spelen.",
+          "De game was uitdagend maar niet te uitdagend.",
+          "De uitdagingen in de game hadden voor mij de juiste moeilijkheidsgraad."
+        ]
+      },
+      {
+        "construct": "Ease of Control",
+        "source": "PXI",
+        "questions": [
+          "Het was gemakkelijk om te weten hoe ik acties kon uitvoeren in de game.",
+          "De acties om de game te besturen waren duidelijk voor mij.",
+          "Ik vond de game makkelijk te besturen."
+        ]
+      },
+      {
+        "construct": "Goals & Rules",
+        "source": "PXI",
+        "questions": [
+          "Ik begreep het algemene doel van de game.",
+          "De doelen van de game waren duidelijk voor mij.",
+          "Ik begreep de doelstellingen van de game."
+        ]
+      },
+      {
+        "construct": "Pleasure",
+        "source": "PXI",
+        "questions": [
+          "Ik vond het leuk om de game te spelen.",
+          "De game was entertainend.",
+          "Ik heb me goed vermaakt tijdens het spelen van de game."
+        ]
+      },
+      {
+        "construct": "Flow",
+        "source": "Flow Short Scale",
+        "questions": [
+          "Ik voelde precies de juiste hoeveelheid uitdaging.",
+          "Mijn gedachten/acties verliepen vloeiend en soepel.",
+          "Ik merkte niet dat de tijd verstreek.",
+          "Ik had geen moeite om me te concentreren.",
+          "Mijn hoofd was helemaal helder.",
+          "Ik ging helemaal op in wat ik deed.",
+          "De juiste gedachten/acties kwamen vanzelf.",
+          "Ik wist wat ik bij elke stap moest doen.",
+          "Ik had het gevoel dat ik alles onder controle had.",
+          "Ik was helemaal in gedachten verzonken."
+        ]
+      },
+      {
+        "construct": "Relatedness",
+        "source": "Enjoy Scale",
+        "questions": [
+          "Ik voelde me verbonden met anderen in de klas tijdens het spelen van de game.",
+          "Ik vond het leuk om met anderen in de klas om te gaan tijdens het spelen van de game.",
+          "Ik werkte samen met anderen in de klas tijdens het spelen van de game.",
+          "Het spelen van de game was een gezamenlijke inspanning met anderen in de klas.",
+          "Ik voelde een band met anderen in de klas toen ik de game speelde."
+        ]
+      },
+      {
+        "construct": "Perceived Learning",
+        "source": "Barzilai & Blau",
+        "questions": [
+          "Ik heb veel geleerd van de game.",
+          "De game heeft mijn kennis vergroot.",
+          "Ik heb nieuwe dingen geleerd van de game.",
+          "De game zal me helpen om de dingen die ik heb geleerd te onthouden."
+        ]
+      },
+      {
+        "construct": "Game Acceptance",
+        "source": "Ghani et al.",
+        "questions": [
+          "Studeren met behulp van de game is een goed idee.",
+          "Ik sta positief tegenover het gebruik van de game.",
+          "Ik geloof dat de game helpt om meer betrokken te zijn bij het leren.",
+          "Ik ben over het algemeen voorstander van het gebruik van de game om te leren.",
+          "Ik vind het een goed idee om de game te gebruiken voor mijn toekomstige lessen."
+        ]
+      }
+    ]
+  }
+}

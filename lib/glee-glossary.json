@@ -1,0 +1,149 @@
+{
+  "gleeGlossary": {
+    "gameUserExperience": {
+      "designQualities": {
+        "easeOfControl": {
+          "name": "Ease of Control",
+          "aliases": ["Gebruiksgemak"],
+          "paperDefinition": "De mate waarin de bediening en interacties intuïtief, duidelijk en beheersbaar zijn, zodat spelers hun bedoelingen kunnen omzetten in acties zonder onnodige inspanning of verwarring.",
+          "paperReference": "Sectie 5.1, pagina 12",
+          "questionnaireMeasurement": "Wordt gemeten via de PXI-vragenlijst met stellingen zoals: 'Ik vond de game makkelijk te besturen' en 'Het was gemakkelijk om te weten hoe ik acties kon uitvoeren in de game'."
+        },
+        "goalsAndRules": {
+          "name": "Goals & Rules",
+          "aliases": ["Doelen & regels"],
+          "paperDefinition": "De mate waarin doelstellingen, beperkingen, regels en voortgang duidelijk worden gecommuniceerd. In serious games moeten de speldoelen zinvol verbonden blijven met de leerdoelen.",
+          "paperReference": "Sectie 5.1, pagina 12",
+          "questionnaireMeasurement": "Wordt gemeten via de PXI-vragenlijst met stellingen zoals: 'Ik begreep het algemene doel van de game' en 'De doelen van de game waren duidelijk voor mij'."
+        },
+        "progressFeedback": {
+          "name": "Progress Feedback",
+          "aliases": ["Voortgangsfeedback"],
+          "paperDefinition": "Tijdige, duidelijke en zinvolle informatie over acties, prestaties, fouten en voortgang, waardoor spelers de gevolgen begrijpen en hun aanpak kunnen aanpassen.",
+          "paperReference": "Sectie 5.1, pagina 12",
+          "questionnaireMeasurement": "Wordt gemeten via de PXI-vragenlijst met stellingen zoals: 'De game gaf mij informatie over mijn voortgang' en 'Ik kon gemakkelijk beoordelen hoe ik presteerde'."
+        },
+        "challenge": {
+          "name": "Challenge",
+          "aliases": ["Uitdaging"],
+          "paperDefinition": "De mate waarin de eisen van het spel aansluiten bij de zich ontwikkelende vaardigheden van de speler. Goed afgestemde moeilijkheidsgraad, progressie en ondersteuning zorgen voor betrokkenheid zonder verveling of frustratie.",
+          "paperReference": "Sectie 5.1, pagina 12",
+          "questionnaireMeasurement": "Wordt gemeten via de PXI-vragenlijst met stellingen zoals: 'De game was niet te makkelijk maar ook niet te moeilijk' en 'De uitdagingen hadden voor mij de juiste moeilijkheidsgraad'."
+        },
+        "audiovisualAppeal": {
+          "name": "Audiovisual Appeal",
+          "aliases": ["Audiovisuele aantrekkingskracht"],
+          "paperDefinition": "De waargenomen kwaliteit en samenhang van de visuele en auditieve presentatie. Het moet sfeer en betrokkenheid ondersteunen, terwijl de helderheid behouden blijft.",
+          "paperReference": "Sectie 5.1, pagina 12",
+          "questionnaireMeasurement": "Wordt gemeten via de PXI-vragenlijst met stellingen zoals: 'Ik heb genoten van de vormgeving' en 'Ik vond de game stijlvol, esthetisch'."
+        }
+      },
+      "experientialResponses": {
+        "competence": {
+          "name": "Competence",
+          "aliases": ["Mastery", "Competentie"],
+          "paperDefinition": "De mate waarin spelers zich bekwaam en effectief voelen tijdens het spelen. Dit kan worden bevorderd door haalbare eisen en feedback die vooruitgang zichtbaar maakt.",
+          "paperReference": "Sectie 5.1, pagina 12",
+          "questionnaireMeasurement": "Wordt gemeten via de PXI-vragenlijst met stellingen zoals: 'Ik had het gevoel dat ik goed was in het spelen' en 'Ik voelde me bekwaam tijdens het spelen'."
+        },
+        "autonomy": {
+          "name": "Autonomy",
+          "aliases": ["Autonomie"],
+          "paperDefinition": "De vrijheid om zinvolle keuzes te maken, agency uit te oefenen en een eigen aanpak te volgen. Keuzes moeten begrijpelijke gevolgen hebben.",
+          "paperReference": "Sectie 5.1, pagina 12",
+          "questionnaireMeasurement": "Wordt gemeten via de PXI-vragenlijst met stellingen zoals: 'Ik voelde me vrij om de game op mijn eigen manier te spelen' en 'Ik had het gevoel dat ik keuze had'."
+        },
+        "relatedness": {
+          "name": "Relatedness",
+          "aliases": ["Sociale verbondenheid"],
+          "paperDefinition": "Sociale verbinding met andere spelers of personages in de game en het daaruit voortvloeiende gevoel van erbij horen.",
+          "paperReference": "Sectie 5.1, pagina 13",
+          "questionnaireMeasurement": "Wordt niet standaard in de PXI gemeten, maar via de ENJOY-vragenlijst als sociale interactie relevant is voor de game."
+        },
+        "discovery": {
+          "name": "Discovery",
+          "aliases": ["Curiosity", "Ontdekking"],
+          "paperDefinition": "Nieuwsgierigheid en motivatie om te verkennen, te experimenteren en mogelijkheden te ontdekken.",
+          "paperReference": "Sectie 5.1, pagina 13",
+          "questionnaireMeasurement": "Wordt gemeten via de PXI-vragenlijst met stellingen zoals: 'Ik wilde ontdekken hoe de game evolueerde'."
+        },
+        "narrativity": {
+          "name": "Narrativity",
+          "aliases": ["Narrativiteit"],
+          "paperDefinition": "Het ervaren van een samenhangend, boeiend verhaal dat emotie en aandacht ondersteunt.",
+          "paperReference": "Sectie 5.1, pagina 13",
+          "questionnaireMeasurement": "Wordt niet standaard in de PXI gemeten, maar via de GUESS Narrative subscale als het verhaal centraal staat in de game."
+        },
+        "immersion": {
+          "name": "Immersion",
+          "aliases": ["Immersie"],
+          "paperDefinition": "De opname van spelers in het spel, volgehouden aandacht en verminderd bewustzijn van de omgeving.",
+          "paperReference": "Sectie 5.1, pagina 13",
+          "questionnaireMeasurement": "Wordt gemeten via de PXI-vragenlijst met stellingen zoals: 'Ik was me tijdens het spelen niet meer bewust van mijn omgeving'."
+        },
+        "meaning": {
+          "name": "Meaning",
+          "aliases": ["Betekenisgeving"],
+          "paperDefinition": "De mate waarin het spel persoonlijk relevant, de moeite waard of verbonden met bredere doelen en waarden aanvoelt.",
+          "paperReference": "Sectie 5.1, pagina 13",
+          "questionnaireMeasurement": "Wordt gemeten via de PXI-vragenlijst met stellingen zoals: 'De game spelen was zinvol voor mij' en 'De game voelde relevant'."
+        },
+        "pleasure": {
+          "name": "Pleasure",
+          "aliases": ["Enjoyment", "Plezier"],
+          "paperDefinition": "De emotionele valentie van de ervaring, variërend van plezier en voldoening tot frustratie. Geeft aan of gameplay belonend aanvoelt.",
+          "paperReference": "Sectie 5.1, pagina 13",
+          "questionnaireMeasurement": "Wordt gemeten via de PXI-vragenlijst met stellingen zoals: 'Ik vond het leuk om de game te spelen' en 'Ik heb me goed vermaakt'."
+        },
+        "arousal": {
+          "name": "Arousal",
+          "aliases": ["Activatie"],
+          "paperDefinition": "Emotionele en fysiologische activatie, variërend van kalmte tot opwinding of spanning.",
+          "paperReference": "Sectie 5.1, pagina 13",
+          "questionnaireMeasurement": "Wordt niet standaard in de PXI gemeten, maar via de Self-Assessment Manikin (SAM) als dit relevant is."
+        },
+        "dominance": {
+          "name": "Dominance",
+          "aliases": ["Dominantie"],
+          "paperDefinition": "Een gevoel van controle over de spelomgeving en de eigen acties, inclusief of acties duidelijke gevolgen hebben.",
+          "paperReference": "Sectie 5.1, pagina 13",
+          "questionnaireMeasurement": "Wordt niet standaard in de PXI gemeten, maar via de Self-Assessment Manikin (SAM) als dit relevant is."
+        }
+      }
+    },
+    "learningProcessesAndOutcomes": {
+      "subjectivePerceptions": {
+        "flow": {
+          "name": "Flow",
+          "aliases": ["Flow"],
+          "paperDefinition": "Volledig gefocust en opgaan in het spel, waarbij acties soepel verlopen en de uitdaging past bij de vaardigheden. Het gevoel dat de activiteit intrinsiek motiverend is.",
+          "paperReference": "Sectie 5.1, pagina 13",
+          "questionnaireMeasurement": "Wordt gemeten via de Flow Short Scale (FSS) met stellingen zoals: 'Mijn gedachten en acties verliepen vloeiend' en 'Ik merkte niet dat de tijd verstreek'."
+        },
+        "gameAcceptance": {
+          "name": "Game Acceptance",
+          "aliases": ["Gameacceptatie"],
+          "paperDefinition": "De houding van spelers ten opzichte van de game als leermiddel en hun bereidheid om het in een onderwijs- of trainingscontext te gebruiken.",
+          "paperReference": "Sectie 5.1, pagina 14",
+          "questionnaireMeasurement": "Wordt gemeten via een attitude-schaal met stellingen zoals: 'Studeren met behulp van de game is een goed idee'."
+        },
+        "perceivedLearning": {
+          "name": "Perceived Learning",
+          "aliases": ["Gepercipieerd leren"],
+          "paperDefinition": "Hoeveel spelers denken dat ze hebben geleerd en hoe educatief waardevol ze de ervaring vinden.",
+          "paperReference": "Sectie 5.1, pagina 14",
+          "questionnaireMeasurement": "Wordt gemeten met een schaal met stellingen zoals: 'Ik heb veel geleerd van de game'."
+        }
+      },
+      "objectiveOutcomes": {
+        "learningGain": {
+          "name": "Learning Gain",
+          "aliases": ["Leerwinst"],
+          "paperDefinition": "Kennis of vaardigheden die zijn opgedaan door gameplay, weerspiegeld in aantoonbare verbetering van voor- naar nameting. Dit is geen subjectieve vragenlijst, maar een objectieve kennistest gebaseerd op de Bloom-taxonomie.",
+          "paperReference": "Sectie 5.1, pagina 14 & Sectie 4.3, pagina 9-10",
+          "questionnaireMeasurement": "Wordt gemeten via een pretest en posttest. De testvragen worden speciaal voor de game gemaakt en afgestemd op de leerdoelen (bijv. onthouden, toepassen, creëren)."
+        }
+      }
+    }
+  }
+}

@@ -1,3 +1,5 @@
+import gleeGlossary from "./glee-glossary.json";
+
 export type DashboardAdvicePayload = {
   study: {
     name: string;
@@ -43,6 +45,69 @@ export type DashboardAdviceMessage = {
   role: "user" | "assistant";
   content: string;
 };
+
+type GlossaryEntry = {
+  name: string;
+  aliases: string[];
+  paperDefinition: string;
+  paperReference: string;
+  questionnaireMeasurement: string;
+};
+
+function isGlossaryEntry(value: unknown): value is GlossaryEntry {
+  return (
+    isRecord(value) &&
+    typeof value.name === "string" &&
+    Array.isArray(value.aliases) &&
+    value.aliases.every((alias) => typeof alias === "string") &&
+    typeof value.paperDefinition === "string" &&
+    typeof value.paperReference === "string" &&
+    typeof value.questionnaireMeasurement === "string"
+  );
+}
+
+function collectGlossaryEntries(value: unknown): GlossaryEntry[] {
+  if (isGlossaryEntry(value)) return [value];
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    return [];
+  }
+
+  return Object.values(value).flatMap(collectGlossaryEntries);
+}
+
+function normalizeGlossaryTerm(value: string): string {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase();
+}
+
+function containsTerm(message: string, term: string): boolean {
+  const normalizedMessage = normalizeGlossaryTerm(message);
+  const normalizedTerm = normalizeGlossaryTerm(term);
+  const escapedTerm = normalizedTerm.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return new RegExp(`(^|[^a-z0-9])${escapedTerm}(?=$|[^a-z0-9])`).test(
+    normalizedMessage
+  );
+}
+
+export function getRelevantGlossaryContext(message: string): string | null {
+  const entries = collectGlossaryEntries(gleeGlossary.gleeGlossary);
+  const matchedEntries = entries.filter((entry) =>
+    [entry.name, ...entry.aliases].some((term) => containsTerm(message, term))
+  );
+
+  if (matchedEntries.length === 0) return null;
+
+  return [
+    "GLOSSARY REFERENCE (provided by the researcher; not independently verified against the paper):",
+    ...matchedEntries.map(
+      (entry) =>
+        `- ${entry.name}: ${entry.paperDefinition} Source reference: ${entry.paperReference}. Measurement information in glossary: ${entry.questionnaireMeasurement}`
+    ),
+    "Use these entries as the source for construct definitions and cite the supplied section/page when useful. Measurement information describes what the glossary says about common instruments/examples; it does not prove which instrument or exact items this study used. Do not claim that these exact items were used in this study unless the study's actual questionnaire is available.",
+  ].join("\n");
+}
 
 export function isBackgroundSummaryRequest(message: string): boolean {
   return (

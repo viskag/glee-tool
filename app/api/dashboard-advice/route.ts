@@ -1,6 +1,7 @@
 import { auth } from "../../../auth";
 import {
   formatBackgroundGroupSummary,
+  getRelevantGlossaryContext,
   isBackgroundSummaryRequest,
   isDashboardAdviceMessageHistory,
   isDashboardAdvicePayload,
@@ -59,7 +60,22 @@ export async function POST(request: Request) {
 
   const dashboardContext = body.messages.length
     ? `Studiemetadata en geaggregeerde dashboardgegevens:\n${JSON.stringify(
-        body.dashboard,
+        {
+          ...body.dashboard,
+          constructs: {
+            measured: body.dashboard.constructs
+              .filter((construct) => construct.average !== null)
+              .map(({ construct, average, answers, participants }) => ({
+                construct,
+                average,
+                answers,
+                participants,
+              })),
+            notMeasured: body.dashboard.constructs
+              .filter((construct) => construct.average === null)
+              .map(({ construct }) => construct),
+          },
+        },
         null,
         2
       )}`
@@ -92,6 +108,11 @@ ${JSON.stringify(
         likertScale: "1-7",
         averageMeaning:
           "Gemiddelde Likert-respons van deelnemers, geen maat voor meetdekking.",
+        notMeasured:
+          "Deze constructen hebben geen score. Ze zijn niet gemeten en mogen niet als laag, nul of laagst gerangschikt worden.",
+        unmeasuredConstructs: body.dashboard.constructs
+          .filter((construct) => construct.average === null)
+          .map(({ construct }) => construct),
         highest: measured.length
           ? {
               average: highestAverage,
@@ -143,6 +164,7 @@ ${JSON.stringify(
   null,
   2
 )}`;
+  const glossaryContext = getRelevantGlossaryContext(latestMessage);
   const conversationMessages = body.messages.length
     ? body.messages
     : [
@@ -167,7 +189,7 @@ ${JSON.stringify(
           {
             role: "system",
             content:
-              "Je bent een zorgvuldige adviseur voor evaluaties van serious games. Antwoord altijd in helder Nederlands, gebruik uitsluitend de meegeleverde geaggregeerde gegevens en verzin geen waarden, categorieën of conclusies. Scores zijn gemiddelden van correct beantwoorde kennisvragen; leerwinst is post minus pre. Constructgemiddelden zijn Likert-responsen op schaal 1-7; null betekent niet gemeten, niet nul. Er zijn geen statistische toetsen uitgevoerd en verschillen zijn niet causaal bewezen. Bij kleine groepen moet je de onzekerheid benoemen, maar kleine groepsgrootte betekent NIET dat gegevens ontbreken: bespreek de bestaande antwoordcategorieën en hun gemeten resultaten beschrijvend als de gebruiker ernaar vraagt. Als achtergrondGroups antwoordgroepen bevat, zijn die gemeten; zeg dan nooit dat die vraag niet gemeten is of dat er geen gegevens zijn. Antwoord bij vervolgvragen op de specifieke vraag en corrigeer eventuele onjuiste beweringen in eerdere AI-antwoorden aan de hand van de meegeleverde gegevens.",
+              "Je bent een zorgvuldige adviseur voor evaluaties van serious games. Antwoord altijd in helder Nederlands, gebruik uitsluitend de meegeleverde geaggregeerde gegevens en verzin geen waarden, categorieën of conclusies. Scores zijn gemiddelden van correct beantwoorde kennisvragen; leerwinst is post minus pre. Constructgemiddelden zijn Likert-responsen op schaal 1-7. Constructen in notMeasured/unmeasuredConstructs zijn niet gemeten en hebben daarom geen score: behandel ze nooit als 0, laag, laagst of als bewijs voor lage meetdekking. Rangschik constructen uitsluitend op basis van gemeten numerieke gemiddelden. Er zijn geen statistische toetsen uitgevoerd en verschillen zijn niet causaal bewezen. Bij kleine groepen moet je de onzekerheid benoemen, maar kleine groepsgrootte betekent NIET dat gegevens ontbreken: bespreek de bestaande antwoordcategorieën en hun gemeten resultaten beschrijvend als de gebruiker ernaar vraagt. Als backgroundGroups antwoordgroepen bevat, zijn die gemeten; zeg dan nooit dat die vraag niet gemeten is of dat er geen gegevens zijn. Antwoord bij vervolgvragen op de specifieke vraag en corrigeer eventuele onjuiste beweringen in eerdere AI-antwoorden aan de hand van de meegeleverde gegevens.",
           },
           ...(!body.messages.length
             ? [
@@ -177,6 +199,9 @@ ${JSON.stringify(
                     "Bij de eerste analyse bespreek je de gemeten constructen en geef je een beknopte interpretatie van achtergrondgroepen zonder de dashboardtabellen volledig te herhalen. Bij vervolgvragen geef je voorrang aan de precieze vraag van de gebruiker. Als die om een samenvatting van achtergrondgroepen vraagt, vat dan ELKE achtergrondvraag en ELKE aanwezige antwoordcategorie samen met de bijbehorende n en gemiddelde pre-, post- en leerwinstscores uit de gegevens. Dit is een beschrijvende samenvatting, geen claim dat de kleine groepen betrouwbaar vergelijkbaar zijn. Maak expliciet onderscheid tussen 'gegevens zijn aanwezig maar de groepen zijn te klein voor een betrouwbare vergelijking' en 'geen gegevens beschikbaar'. Noem nooit dat achtergrondvragen niet gemeten zijn wanneer er antwoordgroepen in de gegevens staan. Negeer voor die specifieke vervolgvraag eerdere AI-uitspraken die daarmee in tegenspraak zijn. Gebruik antwoordlabels exact.",
                 },
               ]
+            : []),
+          ...(glossaryContext
+            ? [{ role: "system" as const, content: glossaryContext }]
             : []),
           {
             role: "user",

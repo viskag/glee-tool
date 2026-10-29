@@ -11,6 +11,7 @@ export type Question = {
   correct: string;
   label: string;
   construct: string;
+  source?: string;
   options: string[];
 };
 
@@ -43,12 +44,16 @@ export type QuestionnaireExport = {
   exportedAt: string;
   study: Study;
   questions: Record<SectionKey, Question[]>;
+  gameUxMode?: GameUxMode;
 };
+
+export type GameUxMode = "construct-template" | "question-editor";
 
 export type QuestionnaireRecord = {
   study: Study;
   questions: Record<SectionKey, Question[]>;
   published: boolean;
+  gameUxMode: GameUxMode;
 };
 
 export type ParticipantResponseExport = {

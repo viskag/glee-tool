@@ -2,11 +2,13 @@
 
 import {
   constructOptions,
+  type GameUxMode,
   sectionInfo,
   type Question,
   type SectionKey,
   type Study,
 } from "../lib/study-model";
+import { gameUxConstructs } from "../lib/game-ux-template";
 
 export default function Builder({
   study,
@@ -15,6 +17,8 @@ export default function Builder({
   selectedId,
   selected,
   activeQuestions,
+  gameUxMode,
+  selectedGameUxConstructs,
   onSectionChange,
   onQuestionSelect,
   onUpdateQuestion,
@@ -23,6 +27,7 @@ export default function Builder({
   onAddOption,
   onRemoveOption,
   onAddQuestion,
+  onToggleGameUxConstruct,
   onEditStudy,
 }: {
   study: Study;
@@ -31,6 +36,8 @@ export default function Builder({
   selectedId: string;
   selected: Question | undefined;
   activeQuestions: Question[];
+  gameUxMode: GameUxMode;
+  selectedGameUxConstructs: string[];
   onSectionChange: (section: SectionKey) => void;
   onQuestionSelect: (id: string) => void;
   onUpdateQuestion: (field: keyof Question, value: string | boolean) => void;
@@ -39,8 +46,15 @@ export default function Builder({
   onAddOption: () => void;
   onRemoveOption: (index: number) => void;
   onAddQuestion: () => void;
+  onToggleGameUxConstruct: (construct: string) => void;
   onEditStudy: () => void;
 }) {
+  const isTemplateGameUx =
+    activeSection === "GAME_UX" && gameUxMode === "construct-template";
+  const selectedQuestionCount = gameUxConstructs
+    .filter(({ construct }) => selectedGameUxConstructs.includes(construct))
+    .reduce((count, item) => count + item.questions.length, 0);
+
   return (
     <>
       <div className="page-heading">
@@ -114,55 +128,110 @@ export default function Builder({
               <span className="overline">
                 {sectionInfo[activeSection].eyebrow} / {activeSection}
               </span>
-              <h2>{sectionInfo[activeSection].label} questions</h2>
+              <h2>
+                {isTemplateGameUx
+                  ? "Choose constructs"
+                  : `${sectionInfo[activeSection].label} questions`}
+              </h2>
             </div>
-            <button className="add-question" onClick={onAddQuestion}>
-              + Add question
-            </button>
-          </div>
-          <div className="question-list">
-            {activeQuestions.map((question) => (
-              <button
-                key={question.id}
-                className={`question-row ${
-                  selected?.id === question.id ? "selected" : ""
-                }`}
-                onClick={() => onQuestionSelect(question.id)}
-              >
-                <span className="drag">::</span>
-                <span className="question-index">
-                  {String(activeQuestions.indexOf(question) + 1).padStart(2, "0")}
-                </span>
-                <span className="question-summary">
-                  <strong>{question.text}</strong>
-                  <small>
-                    {question.id} <i /> {question.type}
-                    {question.objective && (
-                      <>
-                        <i /> Learning measure
-                      </>
-                    )}
-                  </small>
-                </span>
-                <span className="required-pill">
-                  {question.required ? "Required" : "Optional"}
-                </span>
-                <span className="row-arrow">{"->"}</span>
+            {!isTemplateGameUx && (
+              <button className="add-question" onClick={onAddQuestion}>
+                + Add question
               </button>
-            ))}
+            )}
           </div>
+          {isTemplateGameUx ? (
+            <div className="game-ux-template">
+              <p className="game-ux-template-intro">
+                Select the constructs to include. Each selection adds its fixed
+                set of required 1–7 agreement questions.
+              </p>
+              <div className="game-ux-construct-list">
+                {gameUxConstructs.map(({ construct, source, questions }) => (
+                  <label
+                    className="game-ux-construct-option"
+                    key={construct}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={selectedGameUxConstructs.includes(construct)}
+                      onChange={() => onToggleGameUxConstruct(construct)}
+                    />
+                    <span className="game-ux-construct-copy">
+                      <strong>{construct}</strong>
+                      <small>{source}</small>
+                    </span>
+                    <span className="game-ux-question-count">
+                      {questions.length} items
+                    </span>
+                  </label>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <div className="question-list">
+              {activeQuestions.map((question, index) => (
+                <button
+                  key={question.id}
+                  className={`question-row ${
+                    selectedId === question.id ? "selected" : ""
+                  }`}
+                  onClick={() => onQuestionSelect(question.id)}
+                >
+                  <span className="drag">::</span>
+                  <span className="question-index">
+                    {String(index + 1).padStart(2, "0")}
+                  </span>
+                  <span className="question-summary">
+                    <strong>{question.text}</strong>
+                    <small>
+                      {question.id} <i /> {question.source ? `${question.source} · ` : ""}
+                      {question.type}
+                      {question.objective && (
+                        <>
+                          <i /> Learning measure
+                        </>
+                      )}
+                    </small>
+                  </span>
+                  <span className="required-pill">
+                    {question.required ? "Required" : "Optional"}
+                  </span>
+                  <span className="row-arrow">{"->"}</span>
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Inspector */}
         <div className="inspector">
-          <div className="inspector-head">
-            <div>
-              <span className="overline">QUESTION DETAILS</span>
-              <h2>{selected?.id ?? "New question"}</h2>
-            </div>
-            <button className="more-button">...</button>
-          </div>
-          {selected && (
+          {isTemplateGameUx ? (
+            <>
+              <div className="inspector-head">
+                <div>
+                  <span className="overline">GAME UX SELECTION</span>
+                  <h2>{selectedGameUxConstructs.length} constructs</h2>
+                </div>
+              </div>
+              <p className="game-ux-selection-count">
+                {selectedQuestionCount} fixed questions will be included.
+              </p>
+              <p className="game-ux-selection-note">
+                The template items and Dutch 1–7 scale are generated
+                automatically. Use Preview to review the participant version.
+              </p>
+            </>
+          ) : (
+            <>
+              <div className="inspector-head">
+                <div>
+                  <span className="overline">QUESTION DETAILS</span>
+                  <h2>{selected?.id ?? "New question"}</h2>
+                </div>
+                <button className="more-button">...</button>
+              </div>
+              {selected && (
             <>
               <label className="field-label">
                 Question text
@@ -339,6 +408,8 @@ export default function Builder({
                   </select>
                 </label>
               </div>
+            </>
+              )}
             </>
           )}
         </div>

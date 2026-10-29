@@ -173,6 +173,18 @@ h1, h2, h3, .page-heading h1, .preview-top h1, .library-heading h1, .settings-he
 .study-card-dashboard { right:19px; bottom:14px; }
 .study-dot,.player-card-mark { background:var(--brand-red); color:#fff; border-radius:0; }
 .creation-success { position:fixed; z-index:30; top:18px; left:50%; transform:translateX(-50%); padding:11px 16px; border-left:4px solid var(--brand-red); background:#fff; color:var(--brand-red-dark); box-shadow:0 3px 12px rgba(37,37,37,.14); font-size:12px; font-weight:700; }
+.game-ux-template-intro,.game-ux-selection-count,.game-ux-selection-note { color:var(--muted); font-size:11px; line-height:1.6; }
+.game-ux-template-intro { margin:0 0 14px; }
+.game-ux-construct-list { display:grid; gap:7px; }
+.game-ux-construct-option { display:flex; align-items:center; gap:12px; min-height:58px; padding:10px 12px; border:1px solid var(--line); background:#fff; cursor:pointer; }
+.game-ux-construct-option:has(input:checked) { border-color:#d66b7b; background:#fffafa; }
+.game-ux-construct-option input { width:16px; height:16px; accent-color:var(--brand-red); }
+.game-ux-construct-copy { display:grid; flex:1; gap:3px; }
+.game-ux-construct-copy strong { font-size:11px; }
+.game-ux-construct-copy small,.game-ux-question-count { color:var(--muted); font-size:9px; }
+.game-ux-question-count { font-family:'IBM Plex Mono',monospace; }
+.game-ux-selection-count { margin:0 0 12px; color:var(--brand-red-dark); font-weight:700; }
+.game-ux-selection-note { margin:0; }
 .study-picker { position:relative; }
 .study-picker .study-mini { width:100%; }
 .study-picker-menu { position:absolute; z-index:20; top:calc(100% + 6px); left:0; right:0; padding:5px; border:1px solid var(--brand-red); background:#fff; box-shadow:4px 4px 0 rgba(37,37,37,.12); }
@@ -335,5 +347,4 @@ h1, h2, h3, .page-heading h1, .preview-top h1, .library-heading h1, .settings-he
   object-fit: contain;
   display: block;
 }
-
 
