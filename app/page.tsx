@@ -8,6 +8,7 @@ import {
   initialQuestions,
   initialStudy,
   initialStudySummaries,
+  getQuestionObjectives,
   normalizeQuestionnaireConstruct,
   type GameUxMode,
   type ParticipantResponseExport,
@@ -29,6 +30,9 @@ export default function Home() {
   const [activeSection, setActiveSection] = useState<SectionKey>("TEST");
   const [questions, setQuestions] = useState(initialQuestions);
   const [gameUxMode, setGameUxMode] = useState<GameUxMode>("question-editor");
+  const [learningObjectives, setLearningObjectives] = useState<string[]>([
+    "Identify phishing attempts",
+  ]);
   const [selectedId, setSelectedId] = useState("TEST_Q_01");
   const [view, setView] = useState<"library" | "builder" | "preview" | "settings" | "player" | "player-preview" | "dashboard">("library");
   const [studyPickerOpen, setStudyPickerOpen] = useState(false);
@@ -36,7 +40,13 @@ export default function Home() {
   const [study, setStudy] = useState(initialStudy);
   const [studySummaries, setStudySummaries] = useState(initialStudySummaries);
   const [questionnaireStore, setQuestionnaireStore] = useState<Record<string, QuestionnaireRecord>>({
-    [initialStudy.id]: { study: initialStudy, questions: initialQuestions, published: false, gameUxMode: "question-editor" },
+    [initialStudy.id]: {
+      study: initialStudy,
+      questions: initialQuestions,
+      published: false,
+      gameUxMode: "question-editor",
+      learningObjectives: ["Identify phishing attempts"],
+    },
   });
   const [publishError, setPublishError] = useState("");
   const [creationSuccess, setCreationSuccess] = useState("");
@@ -54,9 +64,9 @@ export default function Home() {
   useEffect(() => {
     setQuestionnaireStore((current) => ({
       ...current,
-      [study.id]: { study, questions, published, gameUxMode },
+      [study.id]: { study, questions, published, gameUxMode, learningObjectives },
     }));
-  }, [study, questions, published, gameUxMode]);
+  }, [study, questions, published, gameUxMode, learningObjectives]);
 
   useEffect(() => {
     async function loadSavedStudies() {
@@ -88,6 +98,20 @@ export default function Home() {
               TEST: Array.isArray(item.questions?.TEST) ? (item.questions.TEST as Question[]) : [],
               GAME_UX: Array.isArray(item.questions?.GAME_UX) ? (item.questions.GAME_UX as Question[]) : [],
             };
+            const savedLearningObjectives = Array.isArray(item.learningObjectives)
+              ? item.learningObjectives.filter(
+                  (objective: unknown): objective is string =>
+                    typeof objective === "string" && objective.trim().length > 0
+                )
+              : [];
+            const learningObjectivesWithAssignments = [
+              ...new Set([
+                ...savedLearningObjectives,
+                ...Object.values(savedQuestions)
+                  .flat()
+                  .flatMap(getQuestionObjectives),
+              ]),
+            ];
 
             acc[savedStudy.id] = {
               study: savedStudy,
@@ -97,6 +121,7 @@ export default function Home() {
                 item.gameUxMode === "construct-template"
                   ? "construct-template"
                   : "question-editor",
+              learningObjectives: learningObjectivesWithAssignments,
             };
 
             return acc;
@@ -147,6 +172,25 @@ export default function Home() {
           return { ...question, type: "Likert scale" as const, options: ["1 - Completely disagree", "2 - Disagree", "3 - Slightly disagree", "4 - Neutral / neither agree nor disagree", "5 - Slightly agree", "6 - Agree", "7 - Completely agree"], correct: "" };
         }
         return { ...question, [field]: value };
+      }),
+    }));
+  }
+
+  function toggleQuestionObjective(objective: string) {
+    if (!selected) return;
+    setQuestions((current) => ({
+      ...current,
+      [activeSection]: current[activeSection].map((question) => {
+        if (question.id !== selected.id) return question;
+        const existingObjectives = getQuestionObjectives(question);
+        const objectives = existingObjectives.includes(objective)
+          ? existingObjectives.filter((item) => item !== objective)
+          : [...existingObjectives, objective];
+        return {
+          ...question,
+          objective: objectives[0] ?? "",
+          objectives,
+        };
       }),
     }));
   }
@@ -232,6 +276,22 @@ export default function Home() {
     setPublishError("");
   }
 
+  function addLearningObjective(objective: string) {
+    const trimmed = objective.trim();
+    if (!trimmed) return;
+    setLearningObjectives((current) =>
+      current.some((item) => item.toLocaleLowerCase() === trimmed.toLocaleLowerCase())
+        ? current
+        : [...current, trimmed]
+    );
+  }
+
+  function removeLearningObjective(objective: string) {
+    setLearningObjectives((current) =>
+      current.filter((item) => item !== objective)
+    );
+  }
+
   function createQuestionnaire() {
     const newStudy: Study = { ...initialStudy, id: `questionnaire-${Date.now()}`, name: "Untitled questionnaire", description: "", gameName: "", gameInstructions: "", duration: "", welcomeText: "" };
     const defaultQuestions: Record<SectionKey, Question[]> = {
@@ -247,10 +307,18 @@ export default function Home() {
     setStudy(newStudy);
     setQuestions(defaultQuestions);
     setGameUxMode("construct-template");
+    const defaultLearningObjectives = [
+      ...new Set(
+        Object.values(defaultQuestions)
+          .flat()
+          .flatMap(getQuestionObjectives)
+      ),
+    ];
+    setLearningObjectives(defaultLearningObjectives);
     setActiveSection("TEST");
     setSelectedId(defaultQuestions.TEST[0]?.id ?? "");
     setPublished(false);
-    setQuestionnaireStore((current) => ({ ...current, [newStudy.id]: { study: newStudy, questions: defaultQuestions, published: false, gameUxMode: "construct-template" } }));
+    setQuestionnaireStore((current) => ({ ...current, [newStudy.id]: { study: newStudy, questions: defaultQuestions, published: false, gameUxMode: "construct-template", learningObjectives: defaultLearningObjectives } }));
     setStudySummaries((current) => [{ id: newStudy.id, name: newStudy.name, description: "New educational game evaluation", status: "Draft", updated: "Just now", questions: Object.values(defaultQuestions).flat().length }, ...current]);
     setView("settings");
   }
@@ -264,11 +332,13 @@ export default function Home() {
       setQuestions(record.questions);
       setPublished(record.published);
       setGameUxMode(record.gameUxMode);
+      setLearningObjectives(record.learningObjectives);
     } else {
       setStudy({ ...initialStudy, id: summary.id, name: summary.name, description: summary.description, gameName: summary.name });
       setQuestions({ BACKGROUND: [], TEST: [], GAME_UX: [] });
       setPublished(summary.status === "Published");
       setGameUxMode("question-editor");
+      setLearningObjectives([]);
     }
     setActiveSection("TEST");
     setSelectedId(record?.questions.TEST[0]?.id ?? "");
@@ -282,6 +352,7 @@ export default function Home() {
     setStudy(record?.study ?? { ...initialStudy, id: summary.id, name: summary.name, description: summary.description, gameName: summary.name });
     setQuestions(record?.questions ?? { BACKGROUND: [], TEST: [], GAME_UX: [] });
     setGameUxMode(record?.gameUxMode ?? "question-editor");
+    setLearningObjectives(record?.learningObjectives ?? []);
     setPublished(record?.published ?? summary.status === "Published");
     setActiveSection("TEST");
     setSelectedId(record?.questions.TEST[0]?.id ?? "");
@@ -290,7 +361,7 @@ export default function Home() {
   }
 
   function exportQuestionnaire() {
-    const payload: QuestionnaireExport = { format: "glee-questionnaire", formatVersion: 1, exportedAt: new Date().toISOString(), study, questions, gameUxMode };
+    const payload: QuestionnaireExport = { format: "glee-questionnaire", formatVersion: 1, exportedAt: new Date().toISOString(), study, questions, gameUxMode, learningObjectives };
     const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
@@ -319,11 +390,25 @@ export default function Home() {
             parsed.gameUxMode === "construct-template"
               ? "construct-template"
               : "question-editor";
+          const importedLearningObjectives = [
+            ...new Set([
+              ...(Array.isArray(parsed.learningObjectives)
+                ? parsed.learningObjectives.filter(
+                    (objective): objective is string =>
+                      typeof objective === "string" && objective.trim().length > 0
+                  )
+                : []),
+              ...Object.values(importedQuestions)
+                .flat()
+                .flatMap(getQuestionObjectives),
+            ]),
+          ];
           const questionCount = Object.values(importedQuestions).flat().length;
           setStudy(importedStudy);
           setQuestions(importedQuestions);
           setGameUxMode(importedGameUxMode);
-          setQuestionnaireStore((current) => ({ ...current, [importedStudy.id]: { study: importedStudy, questions: importedQuestions, published: false, gameUxMode: importedGameUxMode } }));
+          setLearningObjectives(importedLearningObjectives);
+          setQuestionnaireStore((current) => ({ ...current, [importedStudy.id]: { study: importedStudy, questions: importedQuestions, published: false, gameUxMode: importedGameUxMode, learningObjectives: importedLearningObjectives } }));
         setStudySummaries((current) => [{ id: importedStudy.id, name: importedStudy.name, description: importedStudy.description || "Imported GLEE questionnaire", status: "Draft", updated: "Just now", questions: questionCount }, ...current]);
         setActiveSection("TEST");
         setSelectedId(importedQuestions.TEST[0]?.id ?? importedQuestions.BACKGROUND[0]?.id ?? "");
@@ -371,6 +456,7 @@ export default function Home() {
       displayMode: study.displayMode,
       questions,
       gameUxMode,
+      learningObjectives,
       published,
       updatedAt: new Date().toISOString(),
     };
@@ -503,10 +589,11 @@ export default function Home() {
         {creationSuccess && <div className="creation-success" role="status">{creationSuccess}</div>}
         <header className="topbar"><div><span className="breadcrumb">{view === "library" || view === "player" ? "Workspace /" : `Questionnaires / ${study.name || "Untitled questionnaire"} /`}</span> <strong>{view === "library" ? "All questionnaires" : view === "player" ? "Participant questionnaires" : view === "dashboard" ? "Dashboard" : view === "builder" ? "Editor" : view === "settings" ? "Questionnaire settings" : view === "player-preview" ? "Participant session" : "Participant preview"}</strong></div><div className="top-actions"><span className={`save-state ${published ? "published" : ""}`}><span className="status-dot" />{published ? "Published" : "All changes saved"}</span>{view === "builder" && <button className="preview-button" onClick={() => setView("preview")}>Preview questionnaire<span>{"->"}</span></button>}{view === "preview" && <button className="preview-button" onClick={() => setView("builder")}>Back to editor<span>{"->"}</span></button>}{view === "settings" && <button className="preview-button" onClick={() => setView("builder")}>Back to editor<span>{"->"}</span></button>}{view === "dashboard" && <button className="preview-button" onClick={() => setView("library")}>Back to questionnaires<span>{"->"}</span></button>}{view !== "library" && view !== "player" && view !== "player-preview" && view !== "dashboard" && <button className="publish-button" onClick={publishStudy}>Save questionnaire<span>^</span></button>}</div></header>
 
-        {view === "library" ? <QuestionnaireLibrary questionnaires={studySummaries} onOpen={openQuestionnaire} onCreate={createQuestionnaire} onExport={exportQuestionnaire} onImport={() => importInputRef.current?.click()} onDashboard={openDashboard} error={publishError} /> : view === "dashboard" ? <Dashboard key={`${dashboardStudyId}:${dashboardResponses.length}`} study={questionnaireStore[dashboardStudyId]?.study ?? (dashboardStudyId === initialStudy.id ? initialStudy : study)} responses={dashboardResponses} error={dashboardError} onRefresh={() => openDashboard(dashboardStudyId)} onImport={() => responseImportInputRef.current?.click()} /> : view === "player" ? <PlayerLibrary questionnaires={studySummaries} onStart={startPlayer} /> : view === "player-preview" && playerStudy && playerQuestions ? <ParticipantPreview questions={playerQuestions} study={playerStudy} onBack={() => setView("player")} onComplete={saveParticipantResponse} /> : view === "preview" ? <ParticipantPreview questions={questions} study={study} onBack={() => setView("builder")} /> : view === "settings" ? <StudySettings study={study} published={published} updateStudy={updateStudy} onTogglePublished={() => setPublished((current) => !current)} error={publishError} /> : (
+        {view === "library" ? <QuestionnaireLibrary questionnaires={studySummaries} onOpen={openQuestionnaire} onCreate={createQuestionnaire} onExport={exportQuestionnaire} onImport={() => importInputRef.current?.click()} onDashboard={openDashboard} error={publishError} /> : view === "dashboard" ? <Dashboard key={`${dashboardStudyId}:${dashboardResponses.length}`} study={questionnaireStore[dashboardStudyId]?.study ?? (dashboardStudyId === initialStudy.id ? initialStudy : study)} responses={dashboardResponses} error={dashboardError} onRefresh={() => openDashboard(dashboardStudyId)} onImport={() => responseImportInputRef.current?.click()} /> : view === "player" ? <PlayerLibrary questionnaires={studySummaries} onStart={startPlayer} /> : view === "player-preview" && playerStudy && playerQuestions ? <ParticipantPreview questions={playerQuestions} study={playerStudy} onBack={() => setView("player")} onComplete={saveParticipantResponse} /> : view === "preview" ? <ParticipantPreview questions={questions} study={study} onBack={() => setView("builder")} /> : view === "settings" ? <StudySettings study={study} learningObjectives={learningObjectives} published={published} updateStudy={updateStudy} onAddLearningObjective={addLearningObjective} onRemoveLearningObjective={removeLearningObjective} onTogglePublished={() => setPublished((current) => !current)} error={publishError} /> : (
   <Builder
     study={study}
     questions={questions}
+    learningObjectives={learningObjectives}
     gameUxMode={gameUxMode}
     selectedGameUxConstructs={gameUxConstructs
       .filter(({ construct }) =>
@@ -520,6 +607,7 @@ export default function Home() {
     onSectionChange={selectSection}
     onQuestionSelect={setSelectedId}
     onUpdateQuestion={updateQuestion}
+    onToggleQuestionObjective={toggleQuestionObjective}
     onUpdateOption={updateOption}
     onSetCorrectOption={setCorrectOption}
     onAddOption={addOption}

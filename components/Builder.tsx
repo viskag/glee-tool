@@ -2,6 +2,7 @@
 
 import {
   constructOptions,
+  getQuestionObjectives,
   type GameUxMode,
   sectionInfo,
   type Question,
@@ -17,11 +18,13 @@ export default function Builder({
   selectedId,
   selected,
   activeQuestions,
+  learningObjectives,
   gameUxMode,
   selectedGameUxConstructs,
   onSectionChange,
   onQuestionSelect,
   onUpdateQuestion,
+  onToggleQuestionObjective,
   onUpdateOption,
   onSetCorrectOption,
   onAddOption,
@@ -36,11 +39,13 @@ export default function Builder({
   selectedId: string;
   selected: Question | undefined;
   activeQuestions: Question[];
+  learningObjectives: string[];
   gameUxMode: GameUxMode;
   selectedGameUxConstructs: string[];
   onSectionChange: (section: SectionKey) => void;
   onQuestionSelect: (id: string) => void;
   onUpdateQuestion: (field: keyof Question, value: string | boolean) => void;
+  onToggleQuestionObjective: (objective: string) => void;
   onUpdateOption: (index: number, value: string) => void;
   onSetCorrectOption: (option: string) => void;
   onAddOption: () => void;
@@ -54,6 +59,10 @@ export default function Builder({
   const selectedQuestionCount = gameUxConstructs
     .filter(({ construct }) => selectedGameUxConstructs.includes(construct))
     .reduce((count, item) => count + item.questions.length, 0);
+  const selectedObjectives = selected ? getQuestionObjectives(selected) : [];
+  const objectiveChoices = [
+    ...new Set([...learningObjectives, ...selectedObjectives]),
+  ];
 
   return (
     <>
@@ -187,9 +196,10 @@ export default function Builder({
                     <small>
                       {question.id} <i /> {question.source ? `${question.source} · ` : ""}
                       {question.type}
-                      {question.objective && (
+                      {getQuestionObjectives(question).length > 0 && (
                         <>
-                          <i /> Learning measure
+                          <i /> {getQuestionObjectives(question).length} learning objective
+                          {getQuestionObjectives(question).length === 1 ? "" : "s"}
                         </>
                       )}
                     </small>
@@ -331,16 +341,31 @@ export default function Builder({
                   <span>Learning metadata</span>
                   <small>Used for future learning-gain analysis</small>
                 </div>
-                <label className="field-label">
-                  Learning objective
-                  <input
-                    value={selected.objective}
-                    onChange={(event) =>
-                      onUpdateQuestion("objective", event.target.value)
-                    }
-                    placeholder="e.g. Identify phishing attempts"
-                  />
-                </label>
+                <fieldset className="learning-objective-picker">
+                  <legend>Learning objectives</legend>
+                  <small>Select all objectives addressed by this question.</small>
+                  {objectiveChoices.length ? (
+                    objectiveChoices.map((objective) => (
+                      <label key={objective} className="learning-objective-choice">
+                        <input
+                          type="checkbox"
+                          checked={selectedObjectives.includes(objective)}
+                          onChange={() => onToggleQuestionObjective(objective)}
+                        />
+                        <span>
+                          {objective}
+                          {!learningObjectives.includes(objective) && (
+                            <small>Existing assignment</small>
+                          )}
+                        </span>
+                      </label>
+                    ))
+                  ) : (
+                    <p className="learning-objective-empty">
+                      Add learning objectives in questionnaire settings first.
+                    </p>
+                  )}
+                </fieldset>
                 <div className="field-grid">
                   <label className="field-label">
                     Bloom level

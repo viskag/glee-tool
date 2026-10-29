@@ -7,6 +7,7 @@ export type Question = {
   type: QuestionType;
   required: boolean;
   objective: string;
+  objectives?: string[];
   bloom: string;
   correct: string;
   label: string;
@@ -14,6 +15,19 @@ export type Question = {
   source?: string;
   options: string[];
 };
+
+export function getQuestionObjectives(question: Question): string[] {
+  const objectives = Array.isArray(question.objectives)
+    ? question.objectives.filter((objective) => typeof objective === "string")
+    : [];
+  const legacyObjective = question.objective?.trim();
+  return [
+    ...new Set([
+      ...objectives.map((objective) => objective.trim()).filter(Boolean),
+      ...(legacyObjective ? [legacyObjective] : []),
+    ]),
+  ];
+}
 
 export type Study = {
   id: string;
@@ -45,6 +59,7 @@ export type QuestionnaireExport = {
   study: Study;
   questions: Record<SectionKey, Question[]>;
   gameUxMode?: GameUxMode;
+  learningObjectives?: string[];
 };
 
 export type GameUxMode = "construct-template" | "question-editor";
@@ -54,6 +69,7 @@ export type QuestionnaireRecord = {
   questions: Record<SectionKey, Question[]>;
   published: boolean;
   gameUxMode: GameUxMode;
+  learningObjectives: string[];
 };
 
 export type ParticipantResponseExport = {
