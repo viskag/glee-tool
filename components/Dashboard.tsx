@@ -5,6 +5,7 @@ import {
   calculateBackgroundLearningGain,
   calculateConstructMetrics,
   calculateLearningGain,
+  calculateObjectiveLearningGain,
 } from "../lib/analytics";
 import type {
   DashboardAdviceMessage,
@@ -135,6 +136,97 @@ function BackgroundLearningGainPanel({
         <div className="background-gain-empty">
           Load participant response JSONs to compare learning gain across
           Background groups.
+        </div>
+      )}
+    </section>
+  );
+}
+
+function ObjectiveLearningGainPanel({
+  responses,
+}: {
+  responses: ParticipantResponseExport[];
+}) {
+  const objectiveResults = calculateObjectiveLearningGain(responses);
+  const formatPercent = (value: number) => `${value.toFixed(1)}%`;
+
+  return (
+    <section className="objective-learning-panel">
+      <div className="objective-learning-heading">
+        <div>
+          <span className="overline">KNOWLEDGE TEST / LEARNING OBJECTIVES</span>
+          <h2>Pre/post accuracy by learning objective</h2>
+          <p>
+            Each marker shows the average percentage of assigned test questions
+            answered correctly before and after gameplay.
+          </p>
+        </div>
+        <div className="objective-learning-legend" aria-label="Chart legend">
+          <span><i className="objective-pre-dot" /> Pre-test</span>
+          <span><i className="objective-post-dot" /> Post-test</span>
+        </div>
+      </div>
+
+      {objectiveResults.length ? (
+        <div className="objective-learning-chart">
+          <div className="objective-chart-axis" aria-hidden="true">
+            <span />
+            <div className="objective-chart-axis-scale">
+              <span>0%</span><span>50%</span><span>100%</span>
+            </div>
+            <span />
+          </div>
+          {objectiveResults.map((result) => (
+            <article
+              className="objective-learning-row"
+              key={result.objective}
+            >
+              <div className="objective-learning-label">
+                <strong>{result.objective}</strong>
+                <small>
+                  {result.questionCount} scored item
+                  {result.questionCount === 1 ? "" : "s"} · n=
+                  {result.participants}
+                </small>
+              </div>
+              <svg
+                className="objective-learning-dumbbell"
+                viewBox="0 0 100 20"
+                role="img"
+                aria-label={`${result.objective}: pre-test ${formatPercent(result.pre)}, post-test ${formatPercent(result.post)}`}
+                preserveAspectRatio="none"
+              >
+                <line className="objective-chart-track" x1="0" y1="10" x2="100" y2="10" />
+                <line
+                  className={`objective-chart-connector ${result.gain < 0 ? "negative" : ""}`}
+                  x1={result.pre}
+                  y1="10"
+                  x2={result.post}
+                  y2="10"
+                />
+                <circle className="objective-chart-pre" cx={result.pre} cy="10" r="3.2" />
+                <circle className="objective-chart-post" cx={result.post} cy="10" r="3.2" />
+              </svg>
+              <div className="objective-learning-values">
+                <strong>{formatPercent(result.pre)} → {formatPercent(result.post)}</strong>
+                <small>
+                  {result.gain >= 0 ? "+" : ""}
+                  {result.gain.toFixed(1)} pp
+                </small>
+              </div>
+            </article>
+          ))}
+          <p className="objective-learning-note">
+            Objectives can share questions, so their results overlap. These are
+            descriptive pre/post differences, not proof that the game caused
+            learning. Missing answers count as incorrect, consistent with the
+            overall learning-gain calculation.
+          </p>
+        </div>
+      ) : (
+        <div className="objective-learning-empty">
+          No scored Knowledge Test questions have learning objectives assigned.
+          Assign objectives to scored test questions to see this chart.
         </div>
       )}
     </section>
@@ -457,6 +549,7 @@ export default function Dashboard({
       </div>
 
       <BackgroundLearningGainPanel responses={responses} study={study} />
+      <ObjectiveLearningGainPanel responses={responses} />
     </div>
   );
 }

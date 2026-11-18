@@ -87,7 +87,7 @@ Bekijk alle achtergrondvragen. Vergelijk antwoordgroepen uitsluitend binnen deze
 
 Constructgemiddelden zijn op een Likert-schaal van 1 tot 7; hoger betekent niet automatisch beter. null / "Niet gemeten" betekent geen gegevens, geen score. Groeps-pre/post/gain zijn gemiddelde aantallen correcte kennisvragen; gain = post minus pre. Er zijn geen statistische toetsen uitgevoerd.
 
-Schrijf een inhoudelijk maar bondig antwoord van ongeveer 150-250 woorden met kopjes "Constructen", "Achtergrondgroepen", "Beperkingen" en "Mogelijke vervolgstap". Noem enkele cijfers die een inzicht ondersteunen, maar herhaal niet het dashboard. Verzin geen waarden of verklaringen.
+Schrijf een inhoudelijk maar bondig antwoord van ongeveer 300 woorden met kopjes "Constructen", "Achtergrondgroepen", "Beperkingen" en "Mogelijke vervolgstap". Noem enkele cijfers die een inzicht ondersteunen, maar herhaal niet het dashboard. Verzin geen waarden of verklaringen.
 
 Samenvatting:
 ${JSON.stringify(

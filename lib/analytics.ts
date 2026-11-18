@@ -1,5 +1,18 @@
 import type { ConstructMetric, ParticipantResponseExport, Question } from "./study-model";
-import { constructAliases, dashboardGroups } from "./study-model";
+import {
+  constructAliases,
+  dashboardGroups,
+  getQuestionObjectives,
+} from "./study-model";
+
+function isCorrectAnswer(answer: string | undefined, question: Question) {
+  if (!answer || !question.correct) return false;
+  if (answer === question.correct) return true;
+  const correctIndex = /^[A-G]$/i.test(question.correct)
+    ? question.correct.toUpperCase().charCodeAt(0) - 65
+    : -1;
+  return correctIndex >= 0 && question.options[correctIndex] === answer;
+}
 
 function parseLikertValue(answer: string) {
   const match = answer.trim().match(/^[1-7]/);
@@ -37,23 +50,93 @@ export function calculateLearningGain(responses: ParticipantResponseExport[]) {
   let postScoreTotal = 0;
   let scoredParticipants = 0;
   let questionCount = 0;
-  function isCorrect(answer: string | undefined, question: Question) {
-    if (!answer || !question.correct) return false;
-    if (answer === question.correct) return true;
-    const correctIndex = /^[A-G]$/i.test(question.correct) ? question.correct.toUpperCase().charCodeAt(0) - 65 : -1;
-    return correctIndex >= 0 && question.options[correctIndex] === answer;
-  }
-
   responses.forEach((response) => {
     const scoredQuestions = response.questionnaire.questions.TEST.filter((question) => question.correct);
     if (!scoredQuestions.length) return;
     questionCount = Math.max(questionCount, scoredQuestions.length);
-    preScoreTotal += scoredQuestions.filter((question) => isCorrect(response.answers.PRE_TEST[question.id], question)).length;
-    postScoreTotal += scoredQuestions.filter((question) => isCorrect(response.answers.POST_TEST[question.id], question)).length;
+    preScoreTotal += scoredQuestions.filter((question) => isCorrectAnswer(response.answers.PRE_TEST[question.id], question)).length;
+    postScoreTotal += scoredQuestions.filter((question) => isCorrectAnswer(response.answers.POST_TEST[question.id], question)).length;
     scoredParticipants += 1;
   });
   if (!scoredParticipants || !questionCount) return null;
   return { pre: preScoreTotal / scoredParticipants, post: postScoreTotal / scoredParticipants, gain: (postScoreTotal - preScoreTotal) / scoredParticipants, total: questionCount, participants: scoredParticipants };
+}
+
+export type ObjectiveLearningGain = {
+  objective: string;
+  pre: number;
+  post: number;
+  gain: number;
+  participants: number;
+  questionCount: number;
+};
+
+export function calculateObjectiveLearningGain(
+  responses: ParticipantResponseExport[]
+): ObjectiveLearningGain[] {
+  const aggregates = new Map<
+    string,
+    {
+      pre: number;
+      post: number;
+      participants: number;
+      questions: Set<string>;
+    }
+  >();
+
+  responses.forEach((response) => {
+    const objectiveQuestions = new Map<string, Question[]>();
+
+    response.questionnaire.questions.TEST.forEach((question) => {
+      if (!question.correct) return;
+      getQuestionObjectives(question).forEach((objective) => {
+        const questions = objectiveQuestions.get(objective) ?? [];
+        questions.push(question);
+        objectiveQuestions.set(objective, questions);
+      });
+    });
+
+    objectiveQuestions.forEach((questions, objective) => {
+      if (!questions.length) return;
+      const preAccuracy =
+        questions.filter((question) =>
+          isCorrectAnswer(response.answers.PRE_TEST[question.id], question)
+        ).length / questions.length;
+      const postAccuracy =
+        questions.filter((question) =>
+          isCorrectAnswer(response.answers.POST_TEST[question.id], question)
+        ).length / questions.length;
+      const aggregate = aggregates.get(objective) ?? {
+        pre: 0,
+        post: 0,
+        participants: 0,
+        questions: new Set<string>(),
+      };
+
+      aggregate.pre += preAccuracy;
+      aggregate.post += postAccuracy;
+      aggregate.participants += 1;
+      questions.forEach((question) =>
+        aggregate.questions.add(`${question.id}\u0000${question.text}`)
+      );
+      aggregates.set(objective, aggregate);
+    });
+  });
+
+  return Array.from(aggregates.entries())
+    .map(([objective, aggregate]) => {
+      const pre = (aggregate.pre / aggregate.participants) * 100;
+      const post = (aggregate.post / aggregate.participants) * 100;
+      return {
+        objective,
+        pre,
+        post,
+        gain: post - pre,
+        participants: aggregate.participants,
+        questionCount: aggregate.questions.size,
+      };
+    })
+    .sort((a, b) => a.objective.localeCompare(b.objective));
 }
 
 export type BackgroundAnswerGroup = {
